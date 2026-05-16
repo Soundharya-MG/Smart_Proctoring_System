@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Result — AIOEPS</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    body {
+      display:flex; align-items:center; justify-content:center;
+      min-height:100vh; padding:1rem;
+      background: radial-gradient(ellipse at 50% 20%, rgba(124,111,255,0.25), transparent 65%),
+                  radial-gradient(ellipse at 80% 80%, rgba(34,211,238,0.12), transparent 50%),
+                  #07071a;
+    }
+    .result-card { max-width:560px; width:100%; text-align:center; }
+    .confirm-icon { font-size:5rem; margin-bottom:1rem; animation: popIn 0.6s ease; }
+    @keyframes popIn {
+      0%   { transform: scale(0); opacity:0; }
+      70%  { transform: scale(1.15); }
+      100% { transform: scale(1); opacity:1; }
+    }
+    .confirm-title { font-size:2rem; font-weight:800; margin-bottom:0.75rem; }
+    .confirm-title.pass { background:linear-gradient(135deg,#10d97d,#22d3ee); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .confirm-title.fail { background:linear-gradient(135deg,#f87171,#fb923c); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .score-box { padding:1.25rem 1.5rem; border-radius:14px; margin-bottom:1.25rem; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); }
+    .score-big { font-size:3rem; font-weight:900; line-height:1; background:linear-gradient(135deg,#a78bfa,#22d3ee); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .score-label { color:#aaa; font-size:0.9rem; margin-top:0.25rem; }
+    .result-badge-large { display:inline-block; padding:0.5rem 1.5rem; border-radius:50px; font-size:1.1rem; font-weight:700; margin-bottom:1rem; }
+    .result-badge-large.pass { background:rgba(16,217,125,0.15); color:#10d97d; border:1px solid rgba(16,217,125,0.4); }
+    .result-badge-large.fail { background:rgba(248,113,113,0.15); color:#f87171; border:1px solid rgba(248,113,113,0.4); }
+    .stats-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.75rem; margin-bottom:1.25rem; }
+    .stat-mini { padding:0.75rem; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); }
+    .stat-mini .val { font-size:1.4rem; font-weight:700; color:var(--text-primary); }
+    .stat-mini .lbl { font-size:0.75rem; color:#888; margin-top:0.1rem; }
+    .warning-note { padding:0.75rem 1rem; border-radius:10px; margin-bottom:1.25rem; background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.25); color:#fbbf24; font-size:0.85rem; }
+    .session-tag { color:#666; font-size:0.78rem; margin-top:1rem; }
+  </style>
+</head>
+<body>
+<div class="result-card card bounce-in">
+  <div class="confirm-icon" id="resultIcon">⏳</div>
+  <h1 class="confirm-title" id="resultTitle">Calculating…</h1>
+  <div id="resultBadge"></div>
+  <div class="score-box">
+    <div class="score-big" id="scoreBig">—</div>
+    <div class="score-label">Your Score</div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-mini"><div class="val" id="statObtained">—</div><div class="lbl">Marks Obtained</div></div>
+    <div class="stat-mini"><div class="val" id="statTotal">—</div><div class="lbl">Total Marks</div></div>
+    <div class="stat-mini"><div class="val" id="statPass">—</div><div class="lbl">Pass Marks</div></div>
+  </div>
+  <div class="warning-note" id="warningNote" style="display:none">
+    ⚠️ Warnings recorded during exam: <b id="warnCount">0</b> — Result is based on your score only.
+  </div>
+  <div class="flex gap-2 flex-center mt-2">
+    <button class="btn btn-primary" onclick="window.location.href='dashboard.html'">🏠 Dashboard</button>
+  </div>
+  <p class="session-tag">Session ID: <span id="resSession">-</span></p>
+</div>
+<script src="../js/auth.js"></script>
+<script>
+Auth.requireAuth('student');
+const session = JSON.parse(localStorage.getItem('aioeps_session') || '{}');
+document.getElementById('resSession').textContent = session.session_id || '-';
+
+const resultData = JSON.parse(localStorage.getItem('aioeps_result') || 'null');
+
+if (resultData && resultData.admin) {
+  const a = resultData.admin;
+  const isPassed = a.result === 'Pass';
+  document.getElementById('resultIcon').textContent = isPassed ? '🎉' : '😔';
+  const titleEl = document.getElementById('resultTitle');
+  titleEl.textContent = isPassed ? 'Congratulations!' : 'Better Luck Next Time';
+  titleEl.className = 'confirm-title ' + (isPassed ? 'pass' : 'fail');
+  document.getElementById('resultBadge').innerHTML =
+    '<div class="result-badge-large ' + (isPassed?'pass':'fail') + ' mb-2">' +
+    (isPassed ? '✅ PASSED' : '❌ FAILED') + '</div>';
+  document.getElementById('scoreBig').textContent = a.percentage + '%';
+  document.getElementById('statObtained').textContent = a.score;
+  document.getElementById('statTotal').textContent = a.total;
+  document.getElementById('statPass').textContent = a.pass_marks;
+  if (a.warnings && a.warnings > 0) {
+    document.getElementById('warningNote').style.display = 'block';
+    document.getElementById('warnCount').textContent = a.warnings;
+  }
+} else {
+  document.getElementById('resultIcon').textContent = '✅';
+  document.getElementById('resultTitle').textContent = 'Submitted!';
+  document.getElementById('resultTitle').className = 'confirm-title pass';
+  document.getElementById('resultBadge').innerHTML =
+    '<div style="padding:1rem 1.5rem;border-radius:12px;margin-bottom:1.5rem;' +
+    'background:rgba(16,217,125,0.10);border:1px solid rgba(16,217,125,0.3);color:#10d97d;font-size:1rem;font-weight:500;">' +
+    'Your exam has been submitted successfully.<br><small style="opacity:0.7">Check My Results for your score.</small></div>';
+  document.getElementById('scoreBig').textContent = '—';
+}
+
+localStorage.removeItem('aioeps_result');
+</script>
+</body>
+</html>

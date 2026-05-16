@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIOEPS — AI Based Online Examination Proctoring System</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* ── Landing page specific ── */
+    body { padding-top: 0; }
+    .hero {
+      min-height: 100vh; display: flex; align-items: center;
+      padding: 6rem 2rem 4rem;
+      background:
+        radial-gradient(ellipse 70% 50% at 70% 30%, rgba(108,99,255,0.22) 0%, transparent 65%),
+        radial-gradient(ellipse 40% 40% at 20% 80%, rgba(167,139,250,0.12) 0%, transparent 60%),
+        var(--bg-primary);
+    }
+    .hero-inner { max-width: 1200px; margin: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(108,99,255,0.15); border: 1px solid rgba(108,99,255,0.35);
+      border-radius: 20px; padding: 6px 16px; font-size: 0.8rem;
+      color: var(--accent2); margin-bottom: 1.25rem;
+    }
+    .hero-title { font-size: clamp(2.2rem,4vw,3.2rem); line-height: 1.15; margin-bottom: 1.25rem; }
+    .hero-title span { background: linear-gradient(135deg,#6c63ff,#a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .hero-desc { color: var(--text-secondary); font-size: 1rem; line-height: 1.7; margin-bottom: 2rem; }
+    .hero-btns { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
+    .hero-features { display: grid; grid-template-columns: repeat(2,1fr); gap: 0.75rem; }
+    .hero-feat {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.83rem; color: var(--text-secondary);
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 0.6rem 0.85rem;
+    }
+    .feat-icon { font-size: 1.1rem; }
+
+    /* Right panel — login cards */
+    .login-panel { display: flex; flex-direction: column; gap: 1.25rem; }
+    .login-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.75rem;
+      transition: var(--transition); cursor: pointer;
+    }
+    .login-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 8px 30px rgba(108,99,255,0.2); }
+    .login-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 0.75rem; }
+    .login-card-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+    }
+    .login-card-icon.student { background: rgba(108,99,255,0.2); }
+    .login-card-icon.admin   { background: rgba(34,197,94,0.2); }
+    .login-card h3 { font-size: 1.05rem; }
+    .login-card p  { font-size: 0.83rem; color: var(--text-secondary); margin-bottom: 1rem; }
+
+    /* Feature cards section */
+    .features-section { padding: 5rem 2rem; max-width: 1200px; margin: auto; }
+    .section-title { text-align: center; margin-bottom: 0.5rem; }
+    .section-sub   { text-align: center; color: var(--text-secondary); margin-bottom: 3rem; }
+    .feat-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 1.25rem; }
+    .feat-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem;
+      transition: var(--transition);
+    }
+    .feat-card:hover { border-color: var(--accent); transform: translateY(-4px); }
+    .feat-card-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+    .feat-card h3   { font-size: 1rem; margin-bottom: 0.5rem; }
+    .feat-card p    { font-size: 0.83rem; color: var(--text-secondary); }
+
+    /* Footer */
+    footer {
+      text-align: center; padding: 1.5rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-secondary); font-size: 0.82rem;
+    }
+
+    @media(max-width:900px){ .hero-inner{grid-template-columns:1fr} .login-panel{display:none} }
+  </style>
+</head>
+<body>
+
+<!-- ─── Navbar ─────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <span class="logo-icon">🛡️</span>
+    <div>
+      <div style="font-size:1rem;font-weight:800">AIOEPS</div>
+      <div style="font-size:0.6rem;color:var(--text-secondary);font-weight:400">AI Based Online Examination Proctoring System</div>
+    </div>
+  </div>
+  <div class="navbar-links">
+    <span class="nav-link active">Home</span>
+    <span class="nav-link" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">Features</span>
+    <span class="nav-link" onclick="showLoginModal('student')">Student Login</span>
+    <span class="nav-link" onclick="showLoginModal('admin')">Admin Login</span>
+  </div>
+  <div class="flex gap-1">
+    <button class="btn btn-outline btn-sm" onclick="showLoginModal('student')">Student Login</button>
+    <button class="btn btn-primary btn-sm" onclick="showLoginModal('admin')">Admin Login</button>
+  </div>
+</nav>
+
+<!-- ─── Hero ───────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="fade-in">
+      <div class="hero-badge">🤖 AI-Powered Examination Platform</div>
+      <h1 class="hero-title">
+        <span>Secure. Smart.</span><br/>AI-Powered<br/>Online Examinations
+      </h1>
+      <p class="hero-desc">
+        AI proctoring that ensures integrity, fairness and trust in every online exam.
+        Real-time face recognition, eye tracking, and behavior analysis.
+      </p>
+      <div class="hero-btns">
+        <button class="btn btn-primary btn-lg" onclick="showLoginModal('student')">🎓 Student Login</button>
+        <button class="btn btn-outline btn-lg" onclick="showLoginModal('admin')">⚙️ Admin Login</button>
+      </div>
+      <div class="hero-features">
+        <div class="hero-feat"><span class="feat-icon">👤</span>AI Proctoring</div>
+        <div class="hero-feat"><span class="feat-icon">🧠</span>Face Recognition</div>
+        <div class="hero-feat"><span class="feat-icon">👀</span>Eye & Head Tracking</div>
+        <div class="hero-feat"><span class="feat-icon">🔍</span>Plagiarism Detection</div>
+        <div class="hero-feat"><span class="feat-icon">🔒</span>Secure & Reliable</div>
+        <div class="hero-feat"><span class="feat-icon">📊</span>Stress Detection</div>
+      </div>
+    </div>
+
+    <!-- Login cards on the right -->
+    <div class="login-panel fade-in">
+      <div class="login-card" onclick="showLoginModal('student')">
+        <div class="login-card-header">
+          <div class="login-card-icon student">🎓</div>
+          <div>
+            <h3>Student Login</h3>
+            <span class="text-xs text-muted">Take your proctored exam</span>
+          </div>
+        </div>
+        <p>One-time face authentication · AI monitoring · Secure environment</p>
+        <button class="btn btn-primary btn-full">Login as Student →</button>
+      </div>
+      <div class="login-card" onclick="showLoginModal('admin')">
+        <div class="login-card-header">
+          <div class="login-card-icon admin">⚙️</div>
+          <div>
+            <h3>Admin Login</h3>
+            <span class="text-xs text-muted">Manage exams & monitor</span>
+          </div>
+        </div>
+        <p>Live monitoring · AI analysis · Reports & analytics</p>
+        <button class="btn btn-success btn-full">Login as Admin →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Features ───────────────────────────────────────────────── -->
+<section id="features" style="background:var(--bg-secondary); padding:5rem 0;">
+<div class="features-section">
+  <h2 class="section-title">Intelligent Proctoring Features</h2>
+  <p class="section-sub">Advanced AI ensures exam integrity at every step</p>
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-card-icon">👤</div>
+      <h3>Face Recognition</h3>
+      <p>One-time login & continuous verification to ensure the right student is taking the exam.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-card-icon">👀</div>
+      <h3>Eye & Head Tracking</h3>
+      <p>Focus detection & alerts when the student looks away or turns their head.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-card-icon">📱</div>
+      <h3>Object Detection</h3>
+      <p>YOLOv8 detects mobile phones, books, and other prohibited objects in real time.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-card-icon">❤️</div>
+      <h3>Stress Detection (rPPG)</h3>
+      <p>Remote photoplethysmography estimates heart rate and stress level from the webcam.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-card-icon">⌨️</div>
+      <h3>Keystroke Analysis</h3>
+      <p>Detects bot-like or suspicious typing patterns using ML-based keystroke dynamics.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-card-icon">🎤</div>
+      <h3>Voice Detection</h3>
+      <p>Microphone monitoring detects unauthorized talking or noise during exams.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-card-icon">🔒</div>
+      <h3>Tab / Copy Prevention</h3>
+      <p>Prevents tab switching, copy-paste, right-click, and screen capture attempts.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-card-icon">🧠</div>
+      <h3>Federated Learning</h3>
+      <p>Privacy-preserving AI: models train locally, only encrypted weights are shared.</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<footer>© 2025 AIOEPS. All rights reserved. | AI Based Online Examination Proctoring System</footer>
+
+<!-- ─── Login Modal ─────────────────────────────────────────────── -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3 id="modalTitle">Student Login</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="toast-container"></div>
+
+    <!-- Face Scan step (student only) -->
+    <div id="faceScanStep" class="hidden" style="text-align:center;margin-bottom:1rem">
+      <div class="webcam-box" style="width:220px;margin:0 auto 0.75rem;border-radius:50%;overflow:hidden;border-radius:12px">
+        <video id="loginVideo" autoplay muted playsinline style="width:220px;height:165px;object-fit:cover"></video>
+      </div>
+      <div id="faceStatus" style="font-size:0.85rem;color:var(--accent-green)">📷 Scanning face…</div>
+    </div>
+
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" id="loginEmail" class="form-control" placeholder="Enter your email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div style="position:relative">
+          <input type="password" id="loginPassword" class="form-control" placeholder="Enter password" required style="padding-right:2.5rem" />
+          <span onclick="togglePwd()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-secondary)">👁</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;font-size:0.82rem">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="rememberMe" /> Remember me
+        </label>
+        <a href="#" style="color:var(--accent)">Forgot Password?</a>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full btn-lg" id="loginBtn">
+        <span id="loginSpinner" class="hidden">⏳</span> Login
+      </button>
+    </form>
+
+    <div class="auth-divider"><span>or</span></div>
+    <button class="btn btn-outline btn-full" onclick="showRegisterModal()">Create Account</button>
+    <p style="text-align:center;margin-top:0.75rem;font-size:0.78rem;color:var(--text-secondary)">
+      🔒 Your data is secure and private
+    </p>
+  </div>
+</div>
+
+<!-- ─── Register Modal ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="registerModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>Create Account</h3>
+      <button class="modal-close" onclick="document.getElementById('registerModal').classList.remove('show')">✕</button>
+    </div>
+    <form id="registerForm" onsubmit="handleRegister(event)">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" id="regName" class="form-control" placeholder="Your full name" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" id="regEmail" class="form-control" placeholder="Enter email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="regPassword" class="form-control" placeholder="Create password" required minlength="6" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Role</label>
+        <select id="regRole" class="form-control">
+          <option value="student">Student</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full btn-lg">Register</button>
+    </form>
+    <p style="text-align:center;margin-top:0.75rem;font-size:0.82rem">
+      Already have an account? <a href="#" onclick="showLoginModal('student')">Login</a>
+    </p>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="js/auth.js"></script>
+<script>
+  // ── Redirect if already logged in ────────────────────────────
+  const tok = localStorage.getItem('aioeps_token');
+  const usr = JSON.parse(localStorage.getItem('aioeps_user') || 'null');
+  if (tok && usr) {
+    window.location.href = usr.role === 'admin'
+      ? '/admin/dashboard.html'
+      : '/student/dashboard.html';
+  }
+
+  let _loginRole = 'student';
+
+  function showLoginModal(role) {
+    _loginRole = role;
+    document.getElementById('modalTitle').textContent =
+      role === 'admin' ? '⚙️ Admin Login' : '🎓 Student Login';
+    document.getElementById('loginModal').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('loginModal').classList.remove('show');
+    stopLoginVideo();
+  }
+
+  function showRegisterModal() {
+    document.getElementById('loginModal').classList.remove('show');
+    document.getElementById('registerModal').classList.add('show');
+  }
+
+  function togglePwd() {
+    const f = document.getElementById('loginPassword');
+    f.type = f.type === 'password' ? 'text' : 'password';
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('loginModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+
+  let loginStream = null;
+  function stopLoginVideo() {
+    if (loginStream) { loginStream.getTracks().forEach(t => t.stop()); loginStream = null; }
+  }
+
+  function handleLogin(e) {
+    e.preventDefault();
+    const email    = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    const btn      = document.getElementById('loginBtn');
+    btn.disabled = true; btn.textContent = '⏳ Logging in…';
+
+    API.login(email, password).then(data => {
+      if (data.success) {
+        localStorage.setItem('aioeps_token', data.token);
+        localStorage.setItem('aioeps_user',  JSON.stringify(data.user));
+        showToast('✅ Login successful! Redirecting…', 'success');
+        setTimeout(() => {
+          window.location.href = data.user.role === 'admin'
+            ? '/admin/dashboard.html'
+            : '/student/dashboard.html';
+        }, 800);
+      } else {
+        showToast(data.message || 'Login failed', 'error');
+        btn.disabled = false; btn.textContent = 'Login';
+      }
+    }).catch(() => {
+      showToast('Server error. Is backend running?', 'error');
+      btn.disabled = false; btn.textContent = 'Login';
+    });
+  }
+
+  function handleRegister(e) {
+    e.preventDefault();
+    API.register(
+      document.getElementById('regName').value,
+      document.getElementById('regEmail').value,
+      document.getElementById('regPassword').value,
+      document.getElementById('regRole').value
+    ).then(data => {
+      if (data.success) {
+        showToast(`✅ Account created! ID: ${data.student_id}`, 'success');
+        document.getElementById('registerModal').classList.remove('show');
+        showLoginModal('student');
+      } else {
+        showToast(data.message || 'Registration failed', 'error');
+      }
+    });
+  }
+
+  function showToast(msg, type = 'info') {
+    const c = document.getElementById('toast-container');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`; t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+  }
+</script>
+</body>
+</html>

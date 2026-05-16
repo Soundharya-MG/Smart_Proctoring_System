@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Student Dashboard — AIOEPS</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-brand"><span class="logo-icon">🛡️</span>AIOEPS</div>
+  <div class="flex-center gap-2">
+    <span id="userGreeting" class="text-sm text-muted"></span>
+    <button class="btn btn-outline btn-sm" onclick="Auth.logout()">🚪 Logout</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Menu</div>
+      <div class="sidebar-item active" onclick="showSection('dashboard')"><span class="item-icon">🏠</span>Dashboard</div>
+      <div class="sidebar-item" onclick="showSection('exams')"><span class="item-icon">📝</span>Available Exams</div>
+      <div class="sidebar-item" onclick="showSection('results')"><span class="item-icon">📊</span>My Results</div>
+      <div class="sidebar-item" onclick="showSection('profile')"><span class="item-icon">👤</span>Profile</div>
+    </div>
+    <div style="padding:1rem 0.75rem;margin-top:auto">
+      <div style="background:var(--bg-card);border-radius:var(--radius-sm);padding:0.75rem">
+        <div class="text-xs text-muted mb-1">AI Monitoring</div>
+        <div class="flex-center gap-1 text-sm">
+          <span class="status-dot green pulse"></span> Active
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <!-- ── Dashboard Section ── -->
+    <section id="sec-dashboard" class="fade-in">
+      <h2 style="margin-bottom:0.25rem">Welcome back! 👋</h2>
+      <p class="text-muted mb-3" id="welcomeMsg">Loading your stats…</p>
+
+      <div class="grid-4 mb-3" id="statsGrid">
+        <div class="stat-card"><div class="stat-icon blue">📝</div><div><div class="stat-value" id="st-total">-</div><div class="stat-label">Total Exams</div></div></div>
+        <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-value" id="st-passed">-</div><div class="stat-label">Passed</div></div></div>
+        <div class="stat-card"><div class="stat-icon red">❌</div><div><div class="stat-value" id="st-failed">-</div><div class="stat-label">Failed</div></div></div>
+        <div class="stat-card"><div class="stat-icon yellow">⚡</div><div><div class="stat-value" id="st-score">-</div><div class="stat-label">Avg Score</div></div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><span class="card-title">📅 Upcoming Exams</span><button class="btn btn-primary btn-sm" onclick="showSection('exams')">View All</button></div>
+          <div id="upcomingExams"><p class="text-muted text-sm">Loading…</p></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">📊 Recent Results</span></div>
+          <div id="recentResults"><p class="text-muted text-sm">Loading…</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Exams Section ── -->
+    <section id="sec-exams" class="hidden fade-in">
+      <h2 class="mb-3">📝 Available Exams</h2>
+      <div id="examsList"><p class="text-muted">Loading exams…</p></div>
+    </section>
+
+    <!-- ── Results Section ── -->
+    <section id="sec-results" class="hidden fade-in">
+      <h2 class="mb-3">📊 My Results</h2>
+      <div class="card">
+        <div class="table-wrap">
+          <table><thead><tr><th>Exam</th><th>Subject</th><th>Score</th><th>%</th><th>Result</th><th>Warnings</th><th>Date</th></tr></thead>
+          <tbody id="resultsTable"><tr><td colspan="7" class="text-center text-muted">Loading…</td></tr></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Profile Section ── -->
+    <section id="sec-profile" class="hidden fade-in">
+      <h2 class="mb-3">👤 My Profile</h2>
+      <div class="card" style="max-width:500px">
+        <div id="profileInfo"></div>
+        <hr style="border-color:var(--border);margin:1rem 0"/>
+        <h3 class="mb-2">Register Face</h3>
+        <p class="text-sm text-muted mb-2">Capture your face for AI proctoring verification.</p>
+        <div class="webcam-box mb-2" style="max-width:300px">
+          <video id="profileVideo" autoplay muted playsinline></video>
+          <div class="webcam-label"><span class="status-dot green pulse"></span>Camera Live</div>
+        </div>
+        <div class="flex gap-1">
+          <button class="btn btn-primary" onclick="captureFace()">📸 Capture & Register Face</button>
+          <button class="btn btn-ghost" onclick="stopProfileCam()">⏹ Stop Camera</button>
+        </div>
+        <div id="faceRegStatus" class="mt-2"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="../js/auth.js"></script>
+<script>
+const user = Auth.requireAuth('student');
+if (user) {
+  document.getElementById('userGreeting').textContent = `👤 ${user.name}`;
+
+  // Load dashboard data
+  loadDashboard();
+  loadUpcomingExams();
+  loadRecentResults();
+}
+
+function showSection(name) {
+  document.querySelectorAll('[id^="sec-"]').forEach(s => s.classList.add('hidden'));
+  document.getElementById('sec-' + name).classList.remove('hidden');
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  if (name === 'profile') startProfileCam();
+  if (name === 'exams')   loadExams();
+  if (name === 'results') loadResults();
+}
+
+async function loadDashboard() {
+  const d = await API.getDashboard();
+  if (!d.success) return;
+  const s = d.stats;
+  document.getElementById('st-total').textContent  = s.total_exams;
+  document.getElementById('st-passed').textContent = s.passed;
+  document.getElementById('st-failed').textContent = s.failed;
+  document.getElementById('st-score').textContent  = s.avg_score + '%';
+  document.getElementById('welcomeMsg').textContent =
+    `You have taken ${s.total_exams} exam(s) with an average score of ${s.avg_score}%`;
+}
+
+async function loadUpcomingExams() {
+  const d = await API.getExams();
+  const el = document.getElementById('upcomingExams');
+  if (!d.success || !d.exams.length) { el.innerHTML = '<p class="text-muted text-sm">No upcoming exams.</p>'; return; }
+  el.innerHTML = d.exams.slice(0,3).map(e => `
+    <div style="padding:0.75rem 0;border-bottom:1px solid var(--border)">
+      <div class="flex-between">
+        <div><div class="fw-600">${e.title}</div><div class="text-xs text-muted">${e.subject} · ${e.duration_minutes} min · ${e.total_marks} marks</div></div>
+        ${statusBadge(e.status)}
+      </div>
+      <button class="btn btn-primary btn-sm mt-1" onclick="startExam('${e.exam_id}')">Start Exam →</button>
+    </div>`).join('');
+}
+
+async function loadExams() {
+  const d = await API.getExams();
+  const el = document.getElementById('examsList');
+  if (!d.success || !d.exams.length) { el.innerHTML = '<p class="text-muted">No exams available.</p>'; return; }
+  el.innerHTML = `<div class="grid-2">${d.exams.map(e => `
+    <div class="card">
+      <div class="flex-between mb-2">
+        <h3>${e.title}</h3>${statusBadge(e.status)}
+      </div>
+      <div class="text-sm text-muted mb-1">📚 ${e.subject}</div>
+      <div class="text-sm text-muted mb-1">⏱ ${e.duration_minutes} minutes</div>
+      <div class="text-sm text-muted mb-2">📋 ${e.total_marks} marks (Pass: ${e.pass_marks})</div>
+      <div class="text-xs text-muted mb-2">Type: ${e.exam_type}</div>
+      <button class="btn btn-primary btn-full" onclick="startExam('${e.exam_id}')">🚀 Start Exam</button>
+    </div>`).join('')}</div>`;
+}
+
+async function loadRecentResults() {
+  const d = await API.myResults();
+  const el = document.getElementById('recentResults');
+  if (!d.success || !d.results.length) { el.innerHTML = '<p class="text-muted text-sm">No results yet.</p>'; return; }
+  el.innerHTML = d.results.slice(0,3).map(r => `
+    <div style="padding:0.75rem 0;border-bottom:1px solid var(--border)">
+      <div class="flex-between">
+        <div class="fw-600">${r.title}</div>${resultBadge(r.result)}
+      </div>
+      <div class="text-xs text-muted">Score: ${r.score}/${r.total_marks} (${r.percentage}%)</div>
+    </div>`).join('');
+}
+
+async function loadResults() {
+  const d = await API.myResults();
+  const tbody = document.getElementById('resultsTable');
+  if (!d.success || !d.results.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No results yet</td></tr>'; return;
+  }
+  tbody.innerHTML = d.results.map(r => `
+    <tr>
+      <td class="fw-600">${r.title}</td>
+      <td>${r.subject}</td>
+      <td>${r.score}/${r.total_marks}</td>
+      <td>${r.percentage}%</td>
+      <td>${resultBadge(r.result)}</td>
+      <td>${r.total_warnings}</td>
+      <td>${formatDate(r.submitted_at)}</td>
+    </tr>`).join('');
+}
+
+async function startExam(examId) {
+  const data = await API.startExam(examId);
+  if (data.success) {
+    localStorage.setItem('aioeps_session', JSON.stringify({ session_id: data.session_id, exam_id: examId }));
+    window.location.href = 'exam.html';
+  } else {
+    showToast(data.message || 'Could not start exam', 'error');
+  }
+}
+
+// ── Profile / Face Registration ────────────────────────────────────────────
+let profileStream = null;
+
+async function startProfileCam() {
+  const vid = document.getElementById('profileVideo');
+  document.getElementById('profileInfo').innerHTML = `
+    <div class="text-sm"><b>Name:</b> ${user.name}</div>
+    <div class="text-sm"><b>ID:</b> ${user.student_id}</div>
+    <div class="text-sm"><b>Email:</b> ${user.email}</div>
+    <div class="text-sm"><b>Face Registered:</b> ${user.face_encoded ? '✅ Yes' : '❌ No'}</div>`;
+  try {
+    profileStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    vid.srcObject = profileStream;
+  } catch { showToast('Camera access denied', 'error'); }
+}
+
+function stopProfileCam() {
+  if (profileStream) { profileStream.getTracks().forEach(t => t.stop()); profileStream = null; }
+}
+
+async function captureFace() {
+  const vid = document.getElementById('profileVideo');
+  const el  = document.getElementById('faceRegStatus');
+  if (!vid.srcObject) { showToast('Start camera first', 'warning'); return; }
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = vid.videoWidth  || 640;
+  canvas.height = vid.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(vid, 0, 0);
+  const image = canvas.toDataURL('image/jpeg', 0.8);
+
+  // Store brightness as local face reference for in-exam matching
+  const small = document.createElement('canvas');
+  small.width = 80; small.height = 80;
+  small.getContext('2d').drawImage(vid, 0, 0, 80, 80);
+  const pix = small.getContext('2d').getImageData(0, 0, 80, 80).data;
+  let br = 0;
+  for (let i = 0; i < pix.length; i += 4) br += (pix[i] + pix[i+1] + pix[i+2]) / 3;
+  br /= (pix.length / 4);
+  localStorage.setItem('aioeps_face_ref', br.toFixed(2));
+
+  el.innerHTML = '<div class="alert alert-info">⏳ Uploading face…</div>';
+
+  try {
+    const health = await fetch('http://localhost:5000/api/health', { signal: AbortSignal.timeout(2000) });
+    if (!health.ok) throw new Error('Backend error');
+    const res = await API.post('/student/upload-face', { image });
+    if (res.success) {
+      el.innerHTML = '<div class="alert alert-success">✅ Face registered successfully! You can now start exams.</div>';
+      user.face_encoded = true;
+      localStorage.setItem('aioeps_user', JSON.stringify(user));
+    } else {
+      // Still save locally even if backend fails
+      el.innerHTML = `<div class="alert alert-warning">⚠️ ${res.message}<br/><small>Face saved locally for exam matching.</small></div>`;
+      user.face_encoded = true;
+      localStorage.setItem('aioeps_user', JSON.stringify(user));
+    }
+  } catch (err) {
+    // Save locally even without backend
+    el.innerHTML = '<div class="alert alert-warning">⚠️ Backend not running — face saved locally for this session.</div>';
+    user.face_encoded = true;
+    localStorage.setItem('aioeps_user', JSON.stringify(user));
+  }
+}
+</script>
+</body>
+</html>

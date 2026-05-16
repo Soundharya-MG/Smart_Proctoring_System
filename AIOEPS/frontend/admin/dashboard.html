@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Admin Dashboard — AIOEPS</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    .live-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 0.85rem;
+      display: flex; align-items: center; gap: 0.75rem;
+    }
+    .live-avatar {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--accent); display: flex; align-items: center;
+      justify-content: center; font-size: 1.2rem; flex-shrink: 0;
+    }
+    .chart-bar-wrap { display: flex; flex-direction: column; gap: 8px; }
+    .chart-bar-row  { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; }
+    .chart-bar-label{ width: 110px; color: var(--text-secondary); flex-shrink: 0; }
+    .chart-bar-bg   { flex: 1; background: var(--bg-secondary); border-radius: 4px; height: 18px; overflow: hidden; }
+    .chart-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; display: flex; align-items: center; padding-left: 6px; font-size: 0.72rem; font-weight: 700; color: #fff; }
+    .donut-wrap     { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+    .donut-legend   { display: flex; flex-direction: column; gap: 6px; }
+    .donut-item     { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+    .donut-dot      { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar-brand"><span class="logo-icon">🛡️</span>AIOEPS <span class="badge badge-info" style="margin-left:8px">Admin</span></div>
+  <div class="flex-center gap-2">
+    <span class="text-sm text-muted" id="adminName"></span>
+    <span class="text-xs text-muted" id="clockEl"></span>
+    <button class="btn btn-outline btn-sm" onclick="Auth.logout()">🚪 Logout</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Main</div>
+      <div class="sidebar-item active"   data-sec="dashboard" ><span class="item-icon">🏠</span>Dashboard</div>
+      <div class="sidebar-item"          data-sec="students"  ><span class="item-icon">👨‍🎓</span>Students</div>
+      <div class="sidebar-item"          data-sec="exams"     ><span class="item-icon">📝</span>Exams</div>
+      <div class="sidebar-item"          data-sec="warnings"  ><span class="item-icon">⚠️</span>Warnings <span class="item-badge" id="badge-warn">0</span></div>
+      <div class="sidebar-item"          data-sec="plagiarism"><span class="item-icon">🔍</span>Plagiarism Detection</div>
+      <div class="sidebar-item"          data-sec="keystroke" ><span class="item-icon">⌨️</span>Keystroke Analysis</div>
+      <div class="sidebar-item"          data-sec="reports"   ><span class="item-icon">📊</span>Reports</div>
+      <div class="sidebar-item"          data-sec="results"   ><span class="item-icon">🏆</span>Stored Results</div>
+      <div class="sidebar-item"          data-sec="storedanswers"><span class="item-icon">📋</span>Stored Answers</div>
+      <div class="sidebar-item"          data-sec="federated" ><span class="item-icon">🔗</span>Federated Learning</div>
+      <div class="sidebar-item"          data-sec="settings"  ><span class="item-icon">⚙️</span>Settings</div>
+    </div>
+    
+  </aside>
+
+  <main class="main-content">
+
+    <!-- ══ DASHBOARD ══════════════════════════════════════════════════ -->
+    <section id="sec-dashboard" class="fade-in">
+      <div class="flex-between mb-3">
+        <h2>📊 Dashboard Overview</h2>
+        <button class="btn btn-primary btn-sm" onclick="if(typeof downloadReport==='function')downloadReport();else window.open('http://localhost:5000/api/admin/download-report','_blank')">⬇ Download Report</button>
+      </div>
+
+      <!-- Top Stats -->
+      <div class="grid-4 mb-3">
+        <div class="stat-card"><div class="stat-icon blue">👨‍🎓</div><div><div class="stat-value" id="ds-students">—</div><div class="stat-label">Total Students</div></div></div>
+        <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-value" id="ds-safe">—</div><div class="stat-label">Safe Students</div></div></div>
+        <div class="stat-card"><div class="stat-icon yellow">⚠️</div><div><div class="stat-value" id="ds-warnings">—</div><div class="stat-label">Warnings</div></div></div>
+        <div class="stat-card"><div class="stat-icon red">🚨</div><div><div class="stat-value" id="ds-suspicious">—</div><div class="stat-label">Suspicious</div></div></div>
+      </div>
+      <div class="grid-4 mb-3">
+        <div class="stat-card"><div class="stat-icon blue">📝</div><div><div class="stat-value" id="ds-exams">—</div><div class="stat-label">Total Exams</div></div></div>
+        <div class="stat-card"><div class="stat-icon orange">🔴</div><div><div class="stat-value" id="ds-ongoing">—</div><div class="stat-label">Ongoing Exams</div></div></div>
+        <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-value" id="ds-completed">—</div><div class="stat-label">Completed</div></div></div>
+        <div class="stat-card"><div class="stat-icon yellow">⚡</div><div><div class="stat-value" id="ds-high">—</div><div class="stat-label">High Severity</div></div></div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="grid-2 mb-3">
+        <div class="card">
+          <div class="card-header"><span class="card-title">🎯 Overall Exam Status</span></div>
+          <div class="donut-wrap mt-2" id="examStatusChart"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">📈 Warnings by Type</span></div>
+          <div class="chart-bar-wrap mt-2" id="warningTypeChart"></div>
+        </div>
+      </div>
+
+      <!-- Live Student Status table -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">👥 Live Student Status</span>
+          <button class="btn btn-outline btn-sm" onclick="document.querySelector('[data-sec=live]').click()">View All →</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Student</th><th>Status</th><th>rPPG (BPM)</th><th>Warnings</th><th>Action</th></tr></thead>
+            <tbody id="liveTable"><tr><td colspan="6" class="text-center text-muted">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <a href="#" style="display:block;text-align:right;margin-top:0.5rem;font-size:0.82rem" onclick="document.querySelector('[data-sec=students]').click()">View All Students →</a>
+      </div>
+    </section>
+
+    <!-- ══ STUDENTS ═══════════════════════════════════════════════════ -->
+    <section id="sec-students" class="hidden fade-in">
+      <div class="flex-between mb-3">
+        <h2>👨‍🎓 Students</h2>
+        <button class="btn btn-primary btn-sm" onclick="openAddStudent()">+ Add Student</button>
+      </div>
+      <div class="card mb-2" style="padding:0.75rem">
+        <input class="form-control" id="studentSearch" placeholder="🔍 Search students…" oninput="filterStudents()" style="max-width:320px"/>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Student ID</th><th>Name</th><th>Email</th><th>Status</th><th>rPPG</th><th>Exams</th><th>Avg Score</th><th>Warnings</th><th>Action</th></tr></thead>
+            <tbody id="studentsTable"><tr><td colspan="9" class="text-center text-muted">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div id="studentsFooter" class="text-xs text-muted mt-1"></div>
+      </div>
+    </section>
+
+    <!-- ══ EXAMS ══════════════════════════════════════════════════════ -->
+    <section id="sec-exams" class="hidden fade-in">
+      <div class="flex-between mb-3">
+        <h2>📝 Exams</h2>
+        <button class="btn btn-primary btn-sm" onclick="openAddExam()">+ Create Exam</button>
+      </div>
+      <!-- Stats bar -->
+      <div class="grid-4 mb-3">
+        <div class="stat-card" style="cursor:pointer" onclick="filterExams('all')"><div class="stat-icon blue">📝</div><div><div class="stat-value" id="ex-total">—</div><div class="stat-label">Total Exams</div></div></div>
+        <div class="stat-card" style="cursor:pointer" onclick="filterExams('ongoing')"><div class="stat-icon red">🔴</div><div><div class="stat-value" id="ex-ongoing">—</div><div class="stat-label">Ongoing</div></div></div>
+        <div class="stat-card" style="cursor:pointer" onclick="filterExams('upcoming')"><div class="stat-icon yellow">⏳</div><div><div class="stat-value" id="ex-upcoming">—</div><div class="stat-label">Upcoming</div></div></div>
+        <div class="stat-card" style="cursor:pointer" onclick="filterExams('completed')"><div class="stat-icon green">✅</div><div><div class="stat-value" id="ex-completed">—</div><div class="stat-label">Completed</div></div></div>
+      </div>
+      <!-- Filter tabs -->
+      <div class="flex gap-1 mb-3" style="flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" id="tab-all" onclick="filterExams('all')">All Exams</button>
+        <button class="btn btn-ghost btn-sm" id="tab-upcoming" onclick="filterExams('upcoming')">⏳ Upcoming</button>
+        <button class="btn btn-ghost btn-sm" id="tab-ongoing" onclick="filterExams('ongoing')">🔴 Ongoing</button>
+        <button class="btn btn-ghost btn-sm" id="tab-completed" onclick="filterExams('completed')">✅ Completed</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Exam ID</th><th>Title</th><th>Type</th><th>Duration</th><th>Marks</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="examsTable"><tr><td colspan="7" class="text-center text-muted">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ WARNINGS ═══════════════════════════════════════════════════ -->
+    <section id="sec-warnings" class="hidden fade-in">
+      <h2 class="mb-3">⚠️ Proctoring Warnings</h2>
+      <!-- Summary badges -->
+      <div class="grid-4 mb-3">
+        <div class="stat-card"><div class="stat-icon red">⚠️</div><div><div class="stat-value" id="wr-total">—</div><div class="stat-label">Total Warnings</div></div></div>
+        <div class="stat-card"><div class="stat-icon red">🚨</div><div><div class="stat-value" id="wr-high">—</div><div class="stat-label">High Severity</div></div></div>
+        <div class="stat-card"><div class="stat-icon yellow">⚡</div><div><div class="stat-value" id="wr-medium">—</div><div class="stat-label">Medium</div></div></div>
+        <div class="stat-card"><div class="stat-icon blue">ℹ️</div><div><div class="stat-value" id="wr-low">—</div><div class="stat-label">Low</div></div></div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Student</th><th>Type</th><th>Severity</th><th>Time</th><th>Exam</th><th>Action</th></tr></thead>
+            <tbody id="warningsTable"><tr><td colspan="7" class="text-center text-muted">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    
+    <!-- ══ PLAGIARISM DETECTION ══════════════════════════════════════ -->
+    <section id="sec-plagiarism" class="hidden fade-in">
+      <div class="flex-between mb-3">
+        <h2>🔍 Plagiarism Detection</h2>
+        <span class="badge badge-info" style="font-size:0.8rem">Coding Questions Only</span>
+      </div>
+
+      <!-- Live checker card -->
+      <div class="grid-2 mb-3">
+        <div class="card">
+          <div class="card-header"><span class="card-title">🧪 Run Plagiarism Check</span></div>
+          <div class="form-group">
+            <label class="form-label">Question Type</label>
+            <select class="form-control" id="plag-qtype">
+              <option value="Coding">Coding ✅ (Analysis Active)</option>
+              <option value="MCQ">MCQ ⛔ (Bypassed)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Student Code / Answer</label>
+            <textarea class="form-control" id="plag-answer" rows="6" placeholder="Paste student code here…" style="font-family:monospace;font-size:0.82rem"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subject (optional)</label>
+            <select class="form-control" id="plag-subject">
+              <option value="">Auto-detect</option>
+              <option value="data_structures">Data Structures</option>
+              <option value="algorithms">Algorithms</option>
+              <option value="python">Python</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="runPlagiarismCheck()">🔍 Analyse Now</button>
+          <div id="plag-status" class="mt-2"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">📊 Result</span></div>
+          <div id="plag-result-wrap" style="padding:1rem">
+            <div class="text-center text-muted" style="padding:2rem 0">
+              <div style="font-size:3rem">🔍</div>
+              <div>Run a check to see results</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk legend -->
+      <div class="card mb-3">
+        <div class="card-header"><span class="card-title">📋 Risk Level Guide</span></div>
+        <div style="display:flex;gap:1.5rem;flex-wrap:wrap;padding:0.75rem">
+          <div style="display:flex;align-items:center;gap:0.5rem">
+            <div style="width:14px;height:14px;border-radius:50%;background:#22c55e"></div>
+            <span class="text-sm"><b>Normal (Safe)</b> — 0% to 60%: Original or standard syntax</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem">
+            <div style="width:14px;height:14px;border-radius:50%;background:#f59e0b"></div>
+            <span class="text-sm"><b>Medium Risk</b> — 61% to 90%: Significant overlap, review needed</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem">
+            <div style="width:14px;height:14px;border-radius:50%;background:#ef4444"></div>
+            <span class="text-sm"><b>High Risk (Suspicious)</b> — 91% to 100%: Likely direct copy</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- History table -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">🗂 Recent Plagiarism Checks</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Time</th><th>Question Type</th><th>Score</th><th>Risk Level</th><th>Details</th></tr></thead>
+            <tbody id="plagHistoryTable"><tr><td colspan="5" class="text-center text-muted">No checks yet</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ KEYSTROKE DYNAMICS ═════════════════════════════════════════ -->
+    <section id="sec-keystroke" class="hidden fade-in">
+      <div class="flex-between mb-3">
+        <h2>⌨️ Keystroke Dynamics Analysis</h2>
+        <button class="btn btn-outline btn-sm" onclick="loadKeystroke()">🔄 Refresh</button>
+      </div>
+
+      <!-- Phase explainer -->
+      <div class="alert alert-info mb-3" style="font-size:0.85rem">
+        <b>📖 How it works:</b> During the <b>first 40 seconds</b> of a coding task, the system builds a typing signature (Baseline WPM, Dwell & Flight times).
+        After that, it continuously compares live typing against the baseline. A sudden jump (e.g. 45 WPM → 100+ WPM) triggers a <b>Typing Speed Mismatch</b> warning.
+      </div>
+
+      <!-- Stats row -->
+      <div class="stats-grid mb-3">
+        <div class="stat-card"><div class="stat-icon blue">🖥️</div><div><div class="stat-value" id="ks-total">—</div><div class="stat-label">Active Sessions</div></div></div>
+        <div class="stat-card"><div class="stat-icon yellow">⚠️</div><div><div class="stat-value" id="ks-mismatches">—</div><div class="stat-label">Mismatch Alerts</div></div></div>
+        <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-value" id="ks-baseline">—</div><div class="stat-label">Baselines Locked</div></div></div>
+        <div class="stat-card"><div class="stat-icon red">🤖</div><div><div class="stat-value" id="ks-flagged">—</div><div class="stat-label">Bot Patterns Detected</div></div></div>
+      </div>
+
+      <!-- Session table -->
+      <div class="card mb-3">
+        <div class="card-header"><span class="card-title">📡 Live Session Monitor</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Session ID</th><th>Phase</th><th>Baseline WPM</th><th>Mismatch Alerts</th><th>Last Warning</th><th>Status</th></tr></thead>
+            <tbody id="ksSessionTable"><tr><td colspan="6" class="text-center text-muted">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Manual simulator for demo/testing -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">🧪 Simulate Keystroke Data (Demo)</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding:0.5rem">
+          <div class="form-group">
+            <label class="form-label">Simulated Elapsed Time (seconds)</label>
+            <input type="number" class="form-control" id="ks-elapsed" value="45" min="0" max="300"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Avg Dwell Time (ms) — normal: 80-150ms</label>
+            <input type="number" class="form-control" id="ks-dwell" value="100" min="10" max="500"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Avg Flight Time (ms) — normal: 60-120ms</label>
+            <input type="number" class="form-control" id="ks-flight" value="80" min="10" max="500"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Session ID (for baseline tracking)</label>
+            <input type="text" class="form-control" id="ks-session-id" value="demo-session-1"/>
+          </div>
+        </div>
+        <div style="padding:0.5rem 0.5rem 1rem">
+          <button class="btn btn-primary" onclick="simulateKeystroke()">▶ Simulate &amp; Analyse</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ks-dwell').value=30;document.getElementById('ks-flight').value=20;" style="margin-left:0.5rem">🤖 Inject Bot Pattern</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ks-dwell').value=45;document.getElementById('ks-flight').value=15;document.getElementById('ks-elapsed').value=60;" style="margin-left:0.5rem">⚡ Inject Speed Mismatch</button>
+        </div>
+        <div id="ks-sim-result" style="padding:0 1rem 1rem"></div>
+      </div>
+    </section>
+
+    <!-- ══ REPORTS ════════════════════════════════════════════════════ -->
+    <section id="sec-reports" class="hidden fade-in">
+      <h2 class="mb-3">📊 Reports</h2>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Choose Report Type</span></div>
+          <div class="form-group">
+            <label class="form-label">Report Type</label>
+            <select class="form-control" id="reportType">
+              <option>Daily Report</option><option>Weekly Report</option>
+              <option>Exam Summary</option><option>Warning Report</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-control" id="reportDate"/>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="generateReport()">📊 Generate Report</button>
+          <div id="reportStatus" class="mt-2"></div>
+          <hr style="border-color:var(--border);margin:1rem 0"/>
+          <button class="btn btn-success btn-full" onclick="downloadReport()">⬇ Download PDF Report</button>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Summary</span></div>
+          <div id="reportSummary"></div>
+          <hr style="border-color:var(--border);margin:1rem 0"/>
+          <div class="card-header"><span class="card-title">Top Warning Types</span></div>
+          <div id="reportWarningTypes" class="chart-bar-wrap mt-2"></div>
+          <hr style="border-color:var(--border);margin:1rem 0"/>
+          <div class="card-header"><span class="card-title">Recent Activity</span></div>
+          <div id="recentActivity" class="mt-1"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ STORED RESULTS ════════════════════════════════════════════ -->
+    <section id="sec-results" class="hidden fade-in">
+      <div class="flex-between mb-3">
+        <h2>🏆 Stored Results</h2>
+        <input class="form-control" placeholder="🔍 Search results…" style="max-width:260px" oninput="filterResults(this.value)"/>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Student</th><th>Exam</th><th>Score (%)</th><th>Result</th><th>Date</th><th>Warnings</th></tr></thead>
+            <tbody id="resultsTable"><tr><td colspan="7" class="text-center text-muted">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ STORED ANSWERS ════════════════════════════════════════════ -->
+    <section id="sec-storedanswers" class="hidden fade-in">
+      <div class="flex-between mb-3">
+        <h2>📋 Stored Answers</h2>
+        <div class="flex gap-2">
+          <select class="form-control" id="saFilterType" onchange="filterStoredAnswers()" style="max-width:140px">
+            <option value="">All Types</option>
+            <option value="MCQ">MCQ</option>
+            <option value="Coding">Coding</option>
+          </select>
+          <input class="form-control" id="saSearch" placeholder="🔍 Search student / exam…" style="max-width:220px" oninput="filterStoredAnswers()"/>
+        </div>
+      </div>
+      <div id="saContainer"><p class="text-muted">Loading…</p></div>
+    </section>
+
+        <!-- ══ FEDERATED LEARNING ════════════════════════════════════════ -->
+    <section id="sec-federated" class="hidden fade-in">
+      <h2 class="mb-3">🔗 Federated Learning</h2>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><span class="card-title">🌐 Global Model Status</span></div>
+          <div style="padding:0.5rem">
+            <div class="flex-between mb-1 text-sm"><span class="text-muted">Training Round</span><span class="fw-bold" id="fl-round">8</span></div>
+            <div class="flex-between mb-1 text-sm"><span class="text-muted">Global Accuracy</span><span class="fw-bold text-green" id="fl-acc">94.62%</span></div>
+            <div class="flex-between mb-1 text-sm"><span class="text-muted">Total Devices</span><span class="fw-bold" id="fl-devices">118</span></div>
+            <div class="flex-between mb-1 text-sm"><span class="text-muted">Participating</span><span class="fw-bold text-accent">118 (96.3%)</span></div>
+            <div class="progress mt-2 mb-1"><div class="progress-bar green" style="width:94.62%"></div></div>
+            <div class="text-xs text-muted text-center">Model Accuracy: 94.62%</div>
+          </div>
+          <div class="alert alert-success mt-2" style="font-size:0.82rem">
+            <div>✅ <b>Privacy Preserved</b> — Data stays on device</div>
+            <div>🔒 <b>Communication</b> — Secure & Encrypted</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">📈 Model Accuracy Over Rounds</span></div>
+          <div id="flChart" style="padding:1rem">
+            <div class="chart-bar-wrap" id="flAccChart"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card mt-3">
+        <div class="card-header"><span class="card-title">FL Pipeline</span></div>
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;padding:1rem">
+          <div style="text-align:center;font-size:0.8rem"><div style="font-size:1.5rem">📱</div>Local Training</div>
+          <div style="color:var(--accent);font-size:1.5rem">→</div>
+          <div style="text-align:center;font-size:0.8rem"><div style="font-size:1.5rem">🔐</div>Encrypted Aggregation</div>
+          <div style="color:var(--accent);font-size:1.5rem">→</div>
+          <div style="text-align:center;font-size:0.8rem"><div style="font-size:1.5rem">🌐</div>Global Model</div>
+          <div style="color:var(--accent);font-size:1.5rem">→</div>
+          <div style="text-align:center;font-size:0.8rem"><div style="font-size:1.5rem">✅</div>Updated Global Model</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ SETTINGS ═══════════════════════════════════════════════════ -->
+    <section id="sec-settings" class="hidden fade-in">
+      <h2 class="mb-3">⚙️ Settings</h2>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><span class="card-title">General Settings</span></div>
+          <div class="form-group"><label class="form-label">System Name</label><input class="form-control" value="AIOEPS" id="set-name"/></div>
+          <div class="form-group"><label class="form-label">Time Zone</label>
+            <select class="form-control" id="set-tz"><option>UTC+05:30 Asia/Kolkata</option><option>UTC+00:00 UTC</option></select></div>
+          <div class="form-group"><label class="form-label">Date Format</label>
+            <select class="form-control"><option>DD/MM/YYYY</option><option>MM/DD/YYYY</option></select></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Notification Settings</span></div>
+          <div class="form-group flex-between"><label class="form-label">Email Notifications</label>
+            <input type="checkbox" id="set-email" checked style="width:auto"/></div>
+          <div class="form-group flex-between"><label class="form-label">SMS Notifications</label>
+            <input type="checkbox" id="set-sms" checked style="width:auto"/></div>
+          <div class="form-group flex-between"><label class="form-label">Push Notifications</label>
+            <input type="checkbox" id="set-push" style="width:auto"/></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">AI Sensitivity Level</span></div>
+          <div class="form-group">
+            <label class="form-label">Sensitivity</label>
+            <input type="range" min="1" max="3" value="2" class="w-full" id="set-sens"
+              oninput="document.getElementById('sens-label').textContent=['Low','Medium','High'][this.value-1]"/>
+            <div class="flex-between text-xs text-muted mt-1"><span>Low</span><b id="sens-label">Medium</b><span>High</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Danger Zone</span></div>
+          <button class="btn btn-danger btn-sm mb-2" onclick="if(confirm('Clear all logs?')) showToast('Logs cleared','success')">🗑 Clear All Logs</button><br/>
+          <button class="btn btn-outline btn-sm" onclick="showToast('Backup created','success')">💾 Export Backup</button>
+        </div>
+      </div>
+      <button class="btn btn-primary mt-3" onclick="saveSettings()">💾 Save Changes</button>
+    </section>
+
+  </main>
+</div>
+
+<!-- Add Student Modal -->
+<div class="modal-overlay" id="addStudentModal">
+  <div class="modal">
+    <div class="modal-header"><h3>+ Add Student</h3><button class="modal-close" onclick="closeModals()">✕</button></div>
+    <div class="form-group"><label class="form-label">Full Name</label><input class="form-control" id="new-name" placeholder="Student name"/></div>
+    <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="new-email" type="email" placeholder="student@email.com"/></div>
+    <div class="form-group"><label class="form-label">Password</label><input class="form-control" id="new-pwd" type="password" value="student123"/></div>
+    <button class="btn btn-primary btn-full" onclick="addStudent()">Add Student</button>
+  </div>
+</div>
+
+<!-- Add Exam Modal -->
+<div class="modal-overlay" id="addExamModal">
+  <div class="modal">
+    <div class="modal-header"><h3>+ Create Exam</h3><button class="modal-close" onclick="closeModals()">✕</button></div>
+    <div class="grid-2">
+      <div class="form-group"><label class="form-label">Title</label><input class="form-control" id="ex-title" placeholder="Exam title"/></div>
+      <div class="form-group"><label class="form-label">Subject</label><input class="form-control" id="ex-subject" placeholder="Subject"/></div>
+      <div class="form-group"><label class="form-label">Type</label>
+        <select class="form-control" id="ex-type"><option>MCQ</option><option>Coding</option><option>Mixed</option></select></div>
+      <div class="form-group"><label class="form-label">Duration (min)</label><input class="form-control" id="ex-duration" type="number" value="60"/></div>
+      <div class="form-group"><label class="form-label">Total Marks</label><input class="form-control" id="ex-marks" type="number" value="50"/></div>
+      <div class="form-group"><label class="form-label">Pass Marks</label><input class="form-control" id="ex-pass" type="number" value="25"/></div>
+    </div>
+    <div class="form-group"><label class="form-label">Instructions</label><textarea class="form-control" id="ex-instructions" rows="3"></textarea></div>
+    <button class="btn btn-primary btn-full" onclick="createExam()">Create Exam</button>
+  </div>
+</div>
+
+<!-- Add Question Modal -->
+<div class="modal-overlay" id="addQuestionModal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header"><h3>➕ Add Question to <span id="aq-exam-title"></span></h3><button class="modal-close" onclick="document.getElementById('addQuestionModal').classList.remove('show')">✕</button></div>
+    <div class="form-group">
+      <label class="form-label">Question Type</label>
+      <select class="form-control" id="aq-qtype" onchange="toggleQuestionFields()">
+        <option value="MCQ">MCQ</option>
+        <option value="Coding">Coding</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Question Text</label>
+      <textarea class="form-control" id="aq-question" rows="3" placeholder="Enter the question..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Marks</label>
+      <input class="form-control" id="aq-marks" type="number" value="1" min="1"/>
+    </div>
+    <!-- MCQ Fields -->
+    <div id="mcq-fields">
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Option A</label><input class="form-control" id="aq-a" placeholder="Option A"/></div>
+        <div class="form-group"><label class="form-label">Option B</label><input class="form-control" id="aq-b" placeholder="Option B"/></div>
+        <div class="form-group"><label class="form-label">Option C</label><input class="form-control" id="aq-c" placeholder="Option C"/></div>
+        <div class="form-group"><label class="form-label">Option D</label><input class="form-control" id="aq-d" placeholder="Option D"/></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Correct Answer</label>
+        <select class="form-control" id="aq-correct">
+          <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+        </select>
+      </div>
+    </div>
+    <!-- Coding Fields -->
+    <div id="coding-fields" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Language</label>
+        <select class="form-control" id="aq-lang">
+          <option value="python">Python</option><option value="java">Java</option><option value="c">C</option><option value="cpp">C++</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Sample Input</label><textarea class="form-control" id="aq-sample-input" rows="2" placeholder="Sample input..."></textarea></div>
+      <div class="form-group"><label class="form-label">Expected Output</label><textarea class="form-control" id="aq-expected-output" rows="2" placeholder="Expected output..."></textarea></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="submitQuestion()">✅ Add Question</button>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="../js/auth.js"></script>
+<script>
+/* ── Navigation (defined FIRST so sidebar onclick works) ────── */
+function nav(el, sec) {
+  document.querySelectorAll('[id^="sec-"]').forEach(s => s.classList.add('hidden'));
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + sec).classList.remove('hidden');
+  if (el) el.classList.add('active');
+  if (typeof LOADERS !== 'undefined' && LOADERS[sec]) LOADERS[sec]();
+}
+
+/* ── Auth guard ─────────────────────────────────────────────── */
+const adminUser = Auth.requireAuth('admin');
+if (adminUser) document.getElementById('adminName').textContent = '👤 ' + adminUser.name;
+
+/* ── Clock ──────────────────────────────────────────────────── */
+setInterval(() => {
+  document.getElementById('clockEl').textContent = new Date().toLocaleTimeString();
+}, 1000);
+
+const LOADERS = {
+  dashboard:  loadDashboard,
+  live:       loadLive,
+  students:   loadStudents,
+  exams:      loadExams,
+  warnings:   loadWarnings,
+  plagiarism: loadPlagiarism,
+  keystroke:  loadKeystroke,
+  reports:    loadReports,
+  results:    loadResults,
+  storedanswers: loadStoredAnswers,
+  federated:  loadFederated,
+  settings:   loadSettings,
+};
+
+/* ── Dashboard ───────────────────────────────────────────────── */
+let _allStudents = [], _allResults = [], _allAnswers = [];
+
+async function loadDashboard() {
+  const d = await API.adminDashboard();
+  if (!d.success) return;
+  const s = d.stats;
+  document.getElementById('ds-students').textContent  = s.total_students;
+  document.getElementById('ds-safe').textContent      = s.safe_students;
+  document.getElementById('ds-warnings').textContent  = s.total_warnings;
+  document.getElementById('ds-suspicious').textContent= s.suspicious_students;
+  document.getElementById('ds-exams').textContent     = s.total_exams;
+  document.getElementById('ds-ongoing').textContent   = s.ongoing_exams;
+  document.getElementById('ds-completed').textContent = s.completed_exams;
+  document.getElementById('ds-high').textContent      = s.high_severity_warnings;
+  document.getElementById('badge-warn').textContent   = s.total_warnings;
+
+  buildDonutChart(d.stats);
+  buildWarningBars(d.warning_types);
+  buildLiveTable(d.live_students);
+}
+
+function buildDonutChart(s) {
+  const safe = s.safe_students, warn = s.total_warnings,
+        comp = s.completed_exams, total = s.total_students || 1;
+  document.getElementById('examStatusChart').innerHTML = `
+    <svg width="120" height="120" viewBox="0 0 120 120">
+      <circle cx="60" cy="60" r="50" fill="none" stroke="var(--bg-secondary)" stroke-width="18"/>
+      <circle cx="60" cy="60" r="50" fill="none" stroke="#22c55e" stroke-width="18"
+        stroke-dasharray="${(safe/total)*314} 314" stroke-dashoffset="0" transform="rotate(-90 60 60)"/>
+      <circle cx="60" cy="60" r="50" fill="none" stroke="#f59e0b" stroke-width="18"
+        stroke-dasharray="${(warn/Math.max(total,1))*314} 314" stroke-dashoffset="${-(safe/total)*314}" transform="rotate(-90 60 60)"/>
+      <text x="60" y="65" text-anchor="middle" fill="var(--text-primary)" font-size="18" font-weight="800">${total}</text>
+    </svg>
+    <div class="donut-legend">
+      <div class="donut-item"><div class="donut-dot" style="background:#22c55e"></div>Safe (${safe})</div>
+      <div class="donut-item"><div class="donut-dot" style="background:#f59e0b"></div>Warnings (${warn})</div>
+      <div class="donut-item"><div class="donut-dot" style="background:#6c63ff"></div>Completed (${comp})</div>
+    </div>`;
+}
+
+function buildWarningBars(types) {
+  if (!types?.length) { document.getElementById('warningTypeChart').innerHTML = '<p class="text-muted text-sm">No warnings yet</p>'; return; }
+  const max = Math.max(...types.map(t => t.count));
+  const colors = ['#ef4444','#f97316','#f59e0b','#6c63ff','#22c55e','#06b6d4','#a78bfa','#ec4899'];
+  document.getElementById('warningTypeChart').innerHTML = types.slice(0,8).map((t,i) => `
+    <div class="chart-bar-row">
+      <div class="chart-bar-label">${t.warning_type}</div>
+      <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${(t.count/max)*100}%;background:${colors[i%colors.length]}">${t.count}</div></div>
+    </div>`).join('');
+}
+
+function buildLiveTable(students) {
+  const tbody = document.getElementById('liveTable');
+  if (!students?.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No active sessions</td></tr>'; return; }
+  tbody.innerHTML = students.map((s,i) => `
+    <tr>
+      <td>${i+1}</td>
+      <td><b>${s.name}</b><br/><span class="text-xs text-muted">${s.student_id}</span></td>
+      <td><span class="badge ${s.total_warnings > 2 ? 'badge-danger' : s.total_warnings > 0 ? 'badge-warning' : 'badge-success'}">${s.total_warnings > 2 ? '🚨 Suspicious' : s.total_warnings > 0 ? '⚠️ Warning' : '✅ Safe'}</span></td>
+      <td><span class="${(s.rppg||78) > 100 ? 'text-red' : 'text-green'} fw-600">${Math.round(s.rppg||78)}</span></td>
+      <td>${s.total_warnings}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="terminateSession(${s.id})">⛔ Terminate</button></td>
+    </tr>`).join('');
+  document.getElementById('badge-live').textContent = students.length;
+}
+
+/* ── Live Monitoring ─────────────────────────────────────────── */
+async function loadLive() {
+  const d = await API.getLive();
+  const grid = document.getElementById('liveGrid');
+  if (!d.success || !d.sessions?.length) {
+    grid.innerHTML = '<p class="text-muted">No active exam sessions right now.</p>'; return;
+  }
+  document.getElementById('badge-live').textContent = d.sessions.length;
+  grid.innerHTML = d.sessions.map(s => {
+    const bpm = Math.round(s.bpm || 78);
+    const stress = bpm > 100 ? 'High' : bpm > 85 ? 'Medium' : 'Normal';
+    const stressColor = bpm > 100 ? 'red' : bpm > 85 ? 'yellow' : 'green';
+    const statusColor = s.total_warnings > 2 ? 'red' : s.total_warnings > 0 ? 'yellow' : 'green';
+    return `
+    <div class="live-card" style="flex-direction:column;align-items:stretch;gap:0.5rem">
+      <div style="display:flex;align-items:center;gap:0.75rem">
+        <div class="live-avatar">👤</div>
+        <div style="flex:1;min-width:0">
+          <div class="fw-600 text-sm">${s.name}</div>
+          <div class="text-xs text-muted">${s.student_id} | ${s.exam_title}</div>
+          <div class="text-xs mt-1">
+            <span class="status-dot ${statusColor} pulse"></span>
+            ${s.total_warnings > 2 ? 'Suspicious' : s.total_warnings > 0 ? 'Warning' : 'Safe'}
+          </div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="terminateSession(${s.id})" title="Terminate">⛔</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:0.75rem">
+        <div>❤️ rPPG: <b class="${stressColor === 'red' ? 'text-danger' : ''}">${bpm} BPM</b></div>
+        <div>⚠️ Warns: <b>${s.total_warnings}</b></div>
+        <div>👥 Multi-Face: <b>${s.multi_face_count || 0}</b></div>
+        <div>🤦 Head Turn: <b>${s.head_turn_count || 0}</b></div>
+        <div>🔊 Voice: <b>${s.voice_count || 0}</b></div>
+        <div>📱 Mobile: <b>${s.mobile_count || 0}</b></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function terminateSession(id) {
+  if (!confirm('Terminate this exam session?')) return;
+  const d = await API.terminate(id);
+  showToast(d.success ? '✅ Session terminated' : d.message, d.success ? 'success' : 'error');
+  loadLive();
+}
+
+/* ── Students ────────────────────────────────────────────────── */
+async function loadStudents() {
+  const d = await API.getStudents();
+  _allStudents = d.students || [];
+  document.getElementById('studentsFooter').textContent =
+    `Showing ${_allStudents.length} student(s)`;
+  renderStudents(_allStudents);
+}
+
+function renderStudents(list) {
+  const tbody = document.getElementById('studentsTable');
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No students found</td></tr>'; return; }
+  tbody.innerHTML = list.map(s => {
+    const bpm = Math.round(s.rppg || 78);
+    const rppgClass = bpm > 100 ? 'badge badge-danger' : bpm > 85 ? 'badge badge-warning' : 'badge badge-success';
+    const warns = s.warning_count || 0;
+    const statusBadge = warns >= 3 ? 'badge-danger' : warns > 0 ? 'badge-warning' : 'badge-success';
+    const statusLabel = warns >= 3 ? 'Suspicious' : warns > 0 ? 'Warning' : 'Safe';
+    return `
+    <tr>
+      <td><span class="badge badge-info">${s.student_id||'—'}</span></td>
+      <td class="fw-600">${s.name}</td>
+      <td class="text-muted text-sm">${s.email}</td>
+      <td><span class="badge ${statusBadge}">${statusLabel}</span></td>
+      <td><span class="${rppgClass}">${bpm} BPM</span></td>
+      <td>${s.exam_count||0}</td>
+      <td>${s.avg_score ? Math.round(s.avg_score)+'%' : '—'}</td>
+      <td><span class="${warns > 0 ? 'text-danger fw-bold' : ''}">${warns}</span></td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteStudent(${s.id})">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterStudents() {
+  const q = document.getElementById('studentSearch').value.toLowerCase();
+  renderStudents(_allStudents.filter(s =>
+    s.name.toLowerCase().includes(q) || (s.student_id||'').toLowerCase().includes(q) || s.email.toLowerCase().includes(q)
+  ));
+}
+
+async function addStudent() {
+  const d = await API.addStudent({
+    name:     document.getElementById('new-name').value,
+    email:    document.getElementById('new-email').value,
+    password: document.getElementById('new-pwd').value
+  });
+  showToast(d.success ? '✅ Student added! ID: '+d.student_id : d.message, d.success ? 'success' : 'error');
+  if (d.success) { closeModals(); loadStudents(); }
+}
+
+async function deleteStudent(id) {
+  if (!confirm('Deactivate this student?')) return;
+  const d = await API.deleteStudent(id);
+  showToast(d.success ? 'Student deactivated' : d.message, d.success ? 'success' : 'error');
+  if (d.success) loadStudents();
+}
+
+/* ── Exams ───────────────────────────────────────────────────── */
+let allExams = [];
+let currentFilter = 'all';
+
+async function loadExams() {
+  const d = await API.getAdminExams();
+  allExams = d.exams || [];
+  document.getElementById('ex-total').textContent    = allExams.length;
+  document.getElementById('ex-ongoing').textContent  = allExams.filter(e => e.status==='ongoing').length;
+  document.getElementById('ex-upcoming').textContent = allExams.filter(e => e.status==='upcoming').length;
+  document.getElementById('ex-completed').textContent= allExams.filter(e => e.status==='completed').length;
+  renderExamsTable(currentFilter);
+}
+
+function filterExams(status) {
+  currentFilter = status;
+  // Update tab buttons
+  ['all','upcoming','ongoing','completed'].forEach(s => {
+    const btn = document.getElementById('tab-'+s);
+    if(btn) btn.className = s===status ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  });
+  renderExamsTable(status);
+}
+
+function renderExamsTable(filter) {
+  const filtered = filter==='all' ? allExams : allExams.filter(e => e.status===filter);
+  const tbody = document.getElementById('examsTable');
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No ${filter} exams</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(e => `
+    <tr>
+      <td><span class="badge badge-info">${e.exam_id}</span></td>
+      <td class="fw-600">${e.title}</td>
+      <td>${e.exam_type}</td>
+      <td>${e.duration_minutes} min</td>
+      <td>${e.total_marks} (Pass: ${e.pass_marks})</td>
+      <td>
+        <select class="form-control" style="padding:2px 6px;font-size:0.75rem;width:auto" onchange="changeExamStatus('${e.exam_id}',this.value)">
+          <option value="upcoming" ${e.status==='upcoming'?'selected':''}>⏳ Upcoming</option>
+          <option value="ongoing"  ${e.status==='ongoing'?'selected':''}>🔴 Ongoing</option>
+          <option value="completed"${e.status==='completed'?'selected':''}>✅ Completed</option>
+        </select>
+      </td>
+      <td class="flex gap-1">
+        <button class="btn btn-primary btn-sm" onclick="openAddQuestion('${e.exam_id}','${e.title}')" title="Add Question">➕ Q</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteExam('${e.exam_id}','${e.title}')" title="Delete">🗑</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function changeExamStatus(id, status) {
+  const d = await API.updateExamStatus(id, status);
+  showToast(d.success ? 'Status updated to '+status : d.message, d.success ? 'success' : 'error');
+  if (d.success) loadExams();
+}
+
+async function deleteExam(examId, title) {
+  if (!confirm(`Delete exam "${title}"? This cannot be undone.`)) return;
+  try {
+    const res = await fetch(`http://localhost:5000/api/admin/exams/${examId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + Auth.getToken() }
+    });
+    const d = await res.json();
+    showToast(d.success ? '🗑 Exam deleted' : d.message, d.success ? 'success' : 'error');
+    if (d.success) loadExams();
+  } catch(e) {
+    showToast('Delete failed: ' + e.message, 'error');
+  }
+}
+
+let currentQuestionExamId = '';
+function openAddQuestion(examId, title) {
+  currentQuestionExamId = examId;
+  document.getElementById('aq-exam-title').textContent = title;
+  document.getElementById('aq-qtype').value = 'MCQ';
+  toggleQuestionFields();
+  document.getElementById('addQuestionModal').classList.add('show');
+}
+
+function toggleQuestionFields() {
+  const qtype = document.getElementById('aq-qtype').value;
+  document.getElementById('mcq-fields').style.display = qtype==='MCQ' ? 'block' : 'none';
+  document.getElementById('coding-fields').style.display = qtype==='Coding' ? 'block' : 'none';
+}
+
+async function submitQuestion() {
+  const qtype = document.getElementById('aq-qtype').value;
+  const payload = {
+    question_text: document.getElementById('aq-question').value,
+    question_type: qtype,
+    marks: +document.getElementById('aq-marks').value || 1,
+  };
+  if (qtype === 'MCQ') {
+    payload.option_a = document.getElementById('aq-a').value;
+    payload.option_b = document.getElementById('aq-b').value;
+    payload.option_c = document.getElementById('aq-c').value;
+    payload.option_d = document.getElementById('aq-d').value;
+    payload.correct_answer = document.getElementById('aq-correct').value;
+  } else {
+    payload.language = document.getElementById('aq-lang').value;
+    payload.sample_input = document.getElementById('aq-sample-input').value;
+    payload.expected_output = document.getElementById('aq-expected-output').value;
+  }
+  try {
+    const res = await fetch(`http://localhost:5000/api/admin/exams/${currentQuestionExamId}/questions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + Auth.getToken() },
+      body: JSON.stringify(payload)
+    });
+    const d = await res.json();
+    showToast(d.success ? '✅ Question added!' : d.message, d.success ? 'success' : 'error');
+    if (d.success) { document.getElementById('addQuestionModal').classList.remove('show'); }
+  } catch(e) { showToast('Failed: '+e.message, 'error'); }
+}
+
+async function createExam() {
+  const d = await API.createExam({
+    title:            document.getElementById('ex-title').value,
+    subject:          document.getElementById('ex-subject').value,
+    exam_type:        document.getElementById('ex-type').value,
+    duration_minutes: +document.getElementById('ex-duration').value,
+    total_marks:      +document.getElementById('ex-marks').value,
+    pass_marks:       +document.getElementById('ex-pass').value,
+    instructions:     document.getElementById('ex-instructions').value,
+  });
+  showToast(d.success ? '✅ Exam created: '+d.exam_id : d.message, d.success ? 'success' : 'error');
+  if (d.success) { closeModals(); loadExams(); }
+}
+
+/* ── Warnings ────────────────────────────────────────────────── */
+async function loadWarnings() {
+  const d = await API.getWarnings();
+  const ws = d.warnings || [];
+  document.getElementById('wr-total').textContent  = ws.length;
+  document.getElementById('wr-high').textContent   = ws.filter(w=>w.severity==='High'||w.severity==='Critical').length;
+  document.getElementById('wr-medium').textContent = ws.filter(w=>w.severity==='Medium').length;
+  document.getElementById('wr-low').textContent    = ws.filter(w=>w.severity==='Low').length;
+  const tbody = document.getElementById('warningsTable');
+  tbody.innerHTML = ws.map(w => `
+    <tr>
+      <td class="text-xs">${w.warning_id||w.id}</td>
+      <td><b>${w.student_name||'—'}</b><br/><span class="text-xs text-muted">${w.sid||''}</span></td>
+      <td>${w.warning_type}</td>
+      <td>${severityBadge(w.severity)}</td>
+      <td class="text-xs">${new Date(w.timestamp).toLocaleString()}</td>
+      <td class="text-xs">${w.exam_title||'—'}</td>
+      <td><span class="badge badge-${w.severity==='Critical'?'danger':w.severity==='High'?'danger':'warning'}">${w.action_taken||'Logged'}</span></td>
+    </tr>`).join('');
+}
+
+
+/* ── Reports ─────────────────────────────────────────────────── */
+async function loadReports() {
+  const d = await API.adminDashboard();
+  const s = d.stats || {};
+  document.getElementById('reportSummary').innerHTML = `
+    <div class="text-sm flex-between mb-1"><span class="text-muted">Total Students</span><b>${s.total_students||0}</b></div>
+    <div class="text-sm flex-between mb-1"><span class="text-muted">Total Warnings</span><b>${s.total_warnings||0}</b></div>
+    <div class="text-sm flex-between mb-1"><span class="text-muted">Suspicious</span><b>${s.suspicious_students||0}</b></div>
+    <div class="text-sm flex-between mb-1"><span class="text-muted">Exam Completed</span><b>${s.completed_exams||0}</b></div>`;
+  buildWarningBars2(d.warning_types);
+  loadRecentActivity();
+}
+
+function buildWarningBars2(types) {
+  if (!types?.length) { document.getElementById('reportWarningTypes').innerHTML='<p class="text-muted text-sm">None</p>'; return; }
+  const max = Math.max(...types.map(t=>t.count));
+  document.getElementById('reportWarningTypes').innerHTML = types.slice(0,5).map(t=>`
+    <div class="chart-bar-row">
+      <div class="chart-bar-label text-xs">${t.warning_type}</div>
+      <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${(t.count/max)*100}%;background:var(--accent-red)">${t.count}</div></div>
+    </div>`).join('');
+}
+
+async function loadRecentActivity() {
+  const d = await API.getWarnings();
+  const ws = (d.warnings||[]).slice(0,4);
+  document.getElementById('recentActivity').innerHTML = ws.map(w=>`
+    <div style="font-size:0.8rem;padding:4px 0;border-bottom:1px solid var(--border)">
+      <span class="text-muted">${new Date(w.timestamp).toLocaleTimeString()}</span>
+      <b style="margin-left:6px">${w.student_name}</b> — ${w.warning_type}
+    </div>`).join('') || '<p class="text-muted text-sm">No recent activity</p>';
+}
+
+function generateReport() {
+  document.getElementById('reportStatus').innerHTML = '<div class="alert alert-info">📊 Report generated successfully!</div>';
+}
+
+async function downloadReport() {
+  showToast('⏳ Generating PDF report…', 'info');
+  window.open('http://localhost:5000/api/admin/download-report', '_blank');
+}
+
+/* ── Results ─────────────────────────────────────────────────── */
+async function loadResults() {
+  const d = await API.getResults();
+  _allResults = d.results || [];
+  renderResults(_allResults);
+}
+
+function renderResults(list) {
+  const tbody = document.getElementById('resultsTable');
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No results yet</td></tr>'; return; }
+  tbody.innerHTML = list.map(r => `
+    <tr>
+      <td class="text-xs">${r.id}</td>
+      <td><b>${r.name}</b><br/><span class="text-xs text-muted">${r.sid}</span></td>
+      <td>${r.title}</td>
+      <td>${r.percentage}%</td>
+      <td>${resultBadge(r.result)}</td>
+      <td class="text-xs">${formatDate(r.submitted_at)}</td>
+      <td>${r.total_warnings}</td>
+    </tr>`).join('');
+}
+
+function filterResults(q) {
+  q = q.toLowerCase();
+  renderResults(_allResults.filter(r =>
+    r.name?.toLowerCase().includes(q) || r.title?.toLowerCase().includes(q)
+  ));
+}
+
+/* ── Federated Learning ──────────────────────────────────────── */
+async function loadFederated() {
+  try {
+    const fl = await API.get('/proctor/federated/model');
+    if (fl?.success && fl.model) {
+      const m = fl.model;
+      document.getElementById('fl-round').textContent   = m.rounds || '—';
+      document.getElementById('fl-acc').textContent     = ((m.accuracy||0.8462)*100).toFixed(2)+'%';
+      document.getElementById('fl-devices').textContent = m.participants || 0;
+    }
+  } catch(e) {}
+  // Draw accuracy-over-rounds bar chart
+  const rounds = [82,85,88,90,92,93,94,94.62];
+  document.getElementById('flAccChart').innerHTML = rounds.map((v,i)=>`
+    <div class="chart-bar-row">
+      <div class="chart-bar-label">Round ${i+1}</div>
+      <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${v}%;background:var(--accent)">${v}%</div></div>
+    </div>`).join('') +
+    `<div class="mt-2"><button class="btn btn-primary btn-sm" onclick="triggerFederatedAggregate()">🔄 Run Aggregation Round</button></div>`;
+}
+
+/* ── Settings ────────────────────────────────────────────────── */
+function loadSettings() {}
+async function saveSettings() {
+  const d = await API.saveSettings({
+    system_name:         document.getElementById('set-name').value,
+    timezone:            document.getElementById('set-tz').value,
+    email_notifications: document.getElementById('set-email').checked,
+    sms_notifications:   document.getElementById('set-sms').checked,
+    push_notifications:  document.getElementById('set-push').checked,
+  });
+  showToast(d.success ? '✅ Settings saved' : d.message, d.success ? 'success' : 'error');
+}
+
+/* ── Modal helpers ───────────────────────────────────────────── */
+function openAddStudent() { document.getElementById('addStudentModal').classList.add('show'); }
+function openAddExam()    { document.getElementById('addExamModal').classList.add('show'); }
+function closeModals()    { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show')); }
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m) closeModals(); }));
+
+/* ── Boot ───────────────────────────────────────────────────── */
+// Sidebar delegation - fires AFTER all functions are defined
+document.querySelectorAll('.sidebar-item[data-sec]').forEach(item => {
+  item.addEventListener('click', function() {
+    nav(this, this.dataset.sec);
+  });
+});
+
+loadDashboard();
+document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
+
+// ── Real-time polling every 10s ────────────────────────────────────────────
+let _currentSection = 'dashboard';
+document.querySelectorAll('.sidebar-item').forEach(el => {
+  el.addEventListener('click', function() { _currentSection = this.dataset.sec; });
+});
+
+setInterval(async () => {
+  try {
+    if (_currentSection === 'dashboard') await loadDashboard();
+    if (_currentSection === 'live') {
+      await loadLive();
+      // Also update realtime stats
+      const rt = await API.get('/proctor/realtime-stats');
+      if (rt?.success) {
+        document.getElementById('badge-live') && (document.getElementById('badge-live').textContent = rt.active_sessions);
+        document.getElementById('badge-warn') && (document.getElementById('badge-warn').textContent = rt.warnings_today);
+      }
+    }
+    if (_currentSection === 'warnings') await loadWarnings();
+    // Update federated model status
+    const fl = await API.get('/proctor/federated/model');
+    if (fl?.success && fl.model) {
+      const m = fl.model;
+      document.getElementById('fl-round')   && (document.getElementById('fl-round').textContent = m.rounds || '—');
+      document.getElementById('fl-acc')     && (document.getElementById('fl-acc').textContent = ((m.accuracy||0)*100).toFixed(2)+'%');
+      document.getElementById('fl-devices') && (document.getElementById('fl-devices').textContent = m.participants || 0);
+    }
+  } catch(e) {}
+}, 10000);
+
+// ── Federated Aggregate button ─────────────────────────────────────────────
+
+/* ── Plagiarism Detection ──────────────────────────────────────────────────── */
+let _plagHistory = [];
+
+function loadPlagiarism() {
+  renderPlagHistory();
+}
+
+async function runPlagiarismCheck() {
+  const qtype   = document.getElementById('plag-qtype').value;
+  const answer  = document.getElementById('plag-answer').value.trim();
+  const subject = document.getElementById('plag-subject').value;
+  const statusEl = document.getElementById('plag-status');
+  const resultEl = document.getElementById('plag-result-wrap');
+
+  if (!answer) { showToast('Please enter code/answer to analyse', 'error'); return; }
+  statusEl.innerHTML = '<span class="text-muted text-sm">⏳ Analysing…</span>';
+
+  try {
+    const res = await API.post('/proctor/plagiarism', { question_type: qtype, answer, subject });
+    const p = res.plagiarism;
+    const bypassed = res.bypassed;
+    _plagHistory.unshift({ time: new Date().toLocaleTimeString(), qtype, score: p.score, level: p.level, details: p.details });
+    renderPlagHistory();
+    if (bypassed) {
+      resultEl.innerHTML = `<div class="alert alert-info" style="margin:1rem"><div style="font-size:2rem;text-align:center">⛔</div><div class="text-center fw-bold mt-1">Bypassed — MCQ Question</div><div class="text-center text-sm text-muted mt-1">Plagiarism check runs only on Coding questions.</div></div>`;
+      statusEl.innerHTML = '';
+      return;
+    }
+    const scoreColor = p.level === 'Normal' ? '#22c55e' : p.level === 'Medium' ? '#f59e0b' : '#ef4444';
+    const levelIcon  = p.level === 'Normal' ? '✅' : p.level === 'Medium' ? '⚠️' : '🚨';
+    resultEl.innerHTML = `
+      <div style="text-align:center;padding:1rem 0">
+        <div style="font-size:3.5rem;font-weight:900;color:${scoreColor}">${p.score}%</div>
+        <div style="font-size:1.1rem;font-weight:700;color:${scoreColor};margin-top:0.25rem">${levelIcon} ${p.level}</div>
+        <div class="progress mt-3 mb-3" style="height:12px"><div class="progress-bar" style="width:${p.score}%;background:${scoreColor};height:12px;border-radius:6px"></div></div>
+      </div>
+      <hr style="border-color:var(--border)"/>
+      <div style="padding:0.5rem 0">
+        ${typeof p.details === 'object' ? `
+          <div class="flex-between text-sm mb-1"><span class="text-muted">Semantic Similarity</span><span class="fw-bold">${p.details.semantic||0}%</span></div>
+          <div class="flex-between text-sm mb-1"><span class="text-muted">Keyword Match (TF-IDF)</span><span class="fw-bold">${p.details.keyword||0}%</span></div>
+          <div class="flex-between text-sm mb-1"><span class="text-muted">String Match</span><span class="fw-bold">${p.details.string||0}%</span></div>
+          <div class="flex-between text-sm mt-2"><span class="text-muted fw-bold">Combined Score</span><span style="color:${scoreColor};font-weight:700">${p.details.combined||p.score}%</span></div>
+        ` : `<div class="text-sm text-muted">${p.details}</div>`}
+      </div>`;
+    statusEl.innerHTML = '';
+    showToast(`${levelIcon} Plagiarism: ${p.level} (${p.score}%)`, p.level === 'Normal' ? 'success' : 'error');
+  } catch(e) {
+    statusEl.innerHTML = '<span class="text-xs text-muted">Demo mode — backend offline</span>';
+    _simulatePlagResult(qtype, answer, subject);
+  }
+}
+
+// Reference code patterns for plagiarism detection
+const REFERENCE_PATTERNS = {
+  python: [
+    'def main():\n    pass',
+    'for i in range(n):\n    print(i)',
+    'class Solution:\n    def solve(self, nums):',
+    'import sys\nfrom collections import defaultdict',
+    'def binary_search(arr, target):\n    left, right = 0, len(arr)-1',
+    'def merge_sort(arr):\n    if len(arr) <= 1: return arr',
+    'def bubble_sort(arr):\n    n = len(arr)\n    for i in range(n)',
+    'stack = []\nfor char in s:',
+    'dp = [0] * (n+1)\nfor i in range(1, n+1)',
+    'graph = defaultdict(list)',
+  ],
+  java: [
+    'public class Main {\n    public static void main(String[] args)',
+    'for (int i = 0; i < n; i++)',
+    'ArrayList<Integer> list = new ArrayList<>()',
+    'HashMap<String, Integer> map = new HashMap<>()',
+    'public int solve(int[] nums)',
+    'Scanner sc = new Scanner(System.in)',
+  ],
+  general: [
+    'if (n == 0) return 0',
+    'while (left < right)',
+    'return Math.max(a, b)',
+    'Arrays.sort(',
+    'Collections.sort(',
+  ]
+};
+
+function _stringSimilarity(s1, s2) {
+  const l1 = s1.toLowerCase().replace(/\s+/g,' ').trim();
+  const l2 = s2.toLowerCase().replace(/\s+/g,' ').trim();
+  if (!l1 || !l2) return 0;
+  const longer = l1.length > l2.length ? l1 : l2;
+  const shorter = l1.length > l2.length ? l2 : l1;
+  let matches = 0;
+  for (let i = 0; i < shorter.length; i++) {
+    if (longer.includes(shorter.substring(i, i+3))) matches++;
+  }
+  return (matches / shorter.length) * 100;
+}
+
+function _keywordSimilarity(code1, code2) {
+  const keywords = code1.toLowerCase().match(/\b\w{3,}\b/g) || [];
+  const refWords  = code2.toLowerCase().match(/\b\w{3,}\b/g) || [];
+  if (!keywords.length || !refWords.length) return 0;
+  const refSet = new Set(refWords);
+  const matches = keywords.filter(w => refSet.has(w)).length;
+  return Math.min(100, (matches / keywords.length) * 100);
+}
+
+function _simulatePlagResult(qtype, answer, subject) {
+  if (qtype !== 'Coding') {
+    document.getElementById('plag-result-wrap').innerHTML = `<div class="alert alert-info" style="margin:1rem"><div style="font-size:2rem;text-align:center">⛔</div><div class="text-center fw-bold mt-1">Bypassed — MCQ Question</div><div class="text-center text-sm text-muted">Plagiarism check runs only on Coding questions.</div></div>`;
+    return;
+  }
+
+  // Detect language from code
+  let detectedLang = 'general';
+  if (answer.includes('def ') || answer.includes('import ') && !answer.includes('import java')) detectedLang = 'python';
+  else if (answer.includes('public class') || answer.includes('System.out')) detectedLang = 'java';
+
+  const refs = [...(REFERENCE_PATTERNS[detectedLang] || []), ...REFERENCE_PATTERNS.general];
+
+  let maxString = 0, maxKeyword = 0;
+  for (const ref of refs) {
+    const strSim = _stringSimilarity(answer, ref);
+    const kwSim  = _keywordSimilarity(answer, ref);
+    if (strSim > maxString) maxString = strSim;
+    if (kwSim > maxKeyword) maxKeyword = kwSim;
+  }
+
+  // Combined weighted score
+  const combined = Math.min(100, Math.round(maxString * 0.55 + maxKeyword * 0.45));
+  const level = combined <= 60 ? 'Normal' : combined <= 90 ? 'Medium' : 'Suspicious';
+  const color = level === 'Normal' ? '#10d97d' : level === 'Medium' ? '#fbbf24' : '#ff4d6d';
+  const icon  = level === 'Normal' ? '✅' : level === 'Medium' ? '⚠️' : '🚨';
+
+  document.getElementById('plag-result-wrap').innerHTML = `
+    <div style="text-align:center;padding:1rem 0">
+      <div style="font-size:3.5rem;font-weight:900;color:${color}">${combined}%</div>
+      <div style="font-size:1.1rem;font-weight:700;color:${color};margin-top:0.25rem">${icon} ${level}</div>
+      <div class="progress mt-3 mb-3" style="height:12px"><div class="progress-bar" style="width:${combined}%;background:${color};height:12px;border-radius:6px;transition:width 0.8s ease"></div></div>
+      <hr style="border-color:var(--border)"/>
+      <div style="padding:0.5rem 0;text-align:left">
+        <div class="flex-between text-sm mb-1"><span class="text-muted">String Match vs Reference</span><span class="fw-bold">${Math.round(maxString)}%</span></div>
+        <div class="flex-between text-sm mb-1"><span class="text-muted">Keyword Match</span><span class="fw-bold">${Math.round(maxKeyword)}%</span></div>
+        <div class="flex-between text-sm mb-1"><span class="text-muted">Language Detected</span><span class="fw-bold">${detectedLang}</span></div>
+        <div class="flex-between text-sm mt-2"><span class="text-muted fw-bold">Combined Score</span><span style="color:${color};font-weight:700">${combined}%</span></div>
+      </div>
+      <div class="text-xs text-muted mt-2">📊 Compared against ${refs.length} reference patterns</div>
+    </div>`;
+  _plagHistory.unshift({ time: new Date().toLocaleTimeString(), qtype, score: combined, level, details: `String:${Math.round(maxString)}% KW:${Math.round(maxKeyword)}%` });
+  renderPlagHistory();
+}
+
+function renderPlagHistory() {
+  const tbody = document.getElementById('plagHistoryTable');
+  if (!_plagHistory.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No checks yet</td></tr>'; return; }
+  const lc = l => l === 'Normal' ? '#22c55e' : l === 'Medium' ? '#f59e0b' : '#ef4444';
+  tbody.innerHTML = _plagHistory.slice(0,20).map(h => `
+    <tr>
+      <td>${h.time}</td><td>${h.qtype}</td>
+      <td><b style="color:${lc(h.level)}">${h.score}%</b></td>
+      <td><span style="color:${lc(h.level)};font-weight:600">${h.level}</span></td>
+      <td class="text-xs text-muted">${typeof h.details==='object'?JSON.stringify(h.details):h.details}</td>
+    </tr>`).join('');
+}
+
+/* ── Keystroke Dynamics Analysis ──────────────────────────────────────────── */
+
+async function loadKeystroke() {
+  try {
+    const res = await API.get('/proctor/keystroke/summary');
+    const sessions = res.sessions || [];
+    renderKeystrokeSessions(sessions);
+    document.getElementById('ks-total').textContent     = sessions.length;
+    document.getElementById('ks-mismatches').textContent = sessions.reduce((a,s)=>a+(s.mismatch_count||0),0);
+    document.getElementById('ks-baseline').textContent  = sessions.filter(s=>s.phase==='monitoring').length;
+    document.getElementById('ks-flagged').textContent   = sessions.filter(s=>s.last_warning).length;
+  } catch(e) {
+    document.getElementById('ksSessionTable').innerHTML = '<tr><td colspan="6" class="text-center text-muted">No live sessions (backend offline)</td></tr>';
+    ['ks-total','ks-mismatches','ks-baseline','ks-flagged'].forEach(id => document.getElementById(id).textContent='0');
+  }
+}
+
+function renderKeystrokeSessions(sessions) {
+  const tbody = document.getElementById('ksSessionTable');
+  if (!sessions.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No active sessions</td></tr>'; return; }
+  tbody.innerHTML = sessions.map(s => {
+    const phaseBadge = s.phase==='monitoring'
+      ? '<span style="color:#22c55e;font-weight:600">📡 Monitoring</span>'
+      : '<span style="color:#f59e0b;font-weight:600">⏱ Building Baseline</span>';
+    const status = s.last_warning
+      ? '<span style="color:#ef4444;font-weight:600">🚨 Flagged</span>'
+      : '<span style="color:#22c55e;font-weight:600">✅ Normal</span>';
+    return `<tr>
+      <td class="text-xs" style="font-family:monospace">${s.session_id}</td>
+      <td>${phaseBadge}</td>
+      <td>${s.baseline_wpm!=null?s.baseline_wpm+' WPM':'—'}</td>
+      <td>${s.mismatch_count||0}</td>
+      <td class="text-xs text-muted" style="max-width:220px;word-break:break-word">${s.last_warning||'—'}</td>
+      <td>${status}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function simulateKeystroke() {
+  const elapsed   = parseFloat(document.getElementById('ks-elapsed').value)||45;
+  const dwellAvg  = parseFloat(document.getElementById('ks-dwell').value)||100;
+  const flightAvg = parseFloat(document.getElementById('ks-flight').value)||80;
+  const sessionId = document.getElementById('ks-session-id').value||'demo-1';
+  const resultEl  = document.getElementById('ks-sim-result');
+  const gen = (avg,n=20) => Array.from({length:n},()=>Math.max(5,Math.round(avg+(Math.random()-0.5)*avg*0.3)));
+  const payload = { session_id: sessionId, key_data: { dwell_times: gen(dwellAvg), flight_times: gen(flightAvg), elapsed_seconds: elapsed } };
+  resultEl.innerHTML = '<span class="text-muted text-sm">⏳ Analysing…</span>';
+  try {
+    const res = await API.post('/proctor/keystroke', payload);
+    _renderKeystrokeResult(res.analysis||{}, resultEl);
+    showToast((res.analysis||{}).flagged?'🚨 Keystroke anomaly detected!':'✅ Typing pattern normal', (res.analysis||{}).flagged?'error':'success');
+    loadKeystroke();
+  } catch(e) {
+    const wpm      = Math.round(1000/flightAvg*60/5);
+    const anomaly  = dwellAvg<50?0.7:flightAvg<30?0.6:0.1;
+    const mismatch = elapsed>=40&&wpm>90;
+    _renderKeystrokeResult({
+      phase: elapsed>=40?'monitoring':'baseline',
+      anomaly_score: anomaly,
+      flagged: anomaly>0.6||mismatch,
+      avg_dwell_ms: dwellAvg, avg_flight_ms: flightAvg,
+      live_wpm: wpm, baseline_wpm: elapsed>=40?45:null,
+      mismatch_warning: mismatch?`Warning: Typing speed mismatch detected! Pattern changed significantly after 40s baseline (Baseline: 45 WPM → Current: ${wpm} WPM)`:null,
+      reason: anomaly>0.6?'Bot-like typing pattern detected':mismatch?'Speed mismatch detected':'Normal typing pattern',
+    }, resultEl);
+  }
+}
+
+function _renderKeystrokeResult(a, el) {
+  const phaseLabel = a.phase==='monitoring'?'📡 Monitoring Active':'⏱ Building 40s Baseline';
+  const sc = a.flagged?'#ef4444':'#22c55e';
+  el.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-top:0.5rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+        <span class="fw-bold">${phaseLabel}</span>
+        <span style="color:${sc};font-weight:700">${a.flagged?'🚨 FLAGGED':'✅ NORMAL'}</span>
+      </div>
+      ${a.mismatch_warning?`<div style="background:rgba(239,68,68,0.12);border:1px solid #ef4444;border-radius:6px;padding:0.6rem 0.8rem;font-size:0.82rem;color:#ef4444;margin-bottom:0.75rem">⚠️ ${a.mismatch_warning}</div>`:''}
+      <div class="flex-between text-sm mb-1"><span class="text-muted">Anomaly Score</span><span style="color:${sc};font-weight:600">${((a.anomaly_score||0)*100).toFixed(0)}%</span></div>
+      <div class="flex-between text-sm mb-1"><span class="text-muted">Live WPM</span><span class="fw-bold">${a.live_wpm||'—'}</span></div>
+      <div class="flex-between text-sm mb-1"><span class="text-muted">Baseline WPM</span><span class="fw-bold">${a.baseline_wpm!=null?a.baseline_wpm+' WPM':'Not yet captured'}</span></div>
+      <div class="flex-between text-sm mb-1"><span class="text-muted">Avg Dwell</span><span>${a.avg_dwell_ms} ms</span></div>
+      <div class="flex-between text-sm mb-1"><span class="text-muted">Avg Flight</span><span>${a.avg_flight_ms} ms</span></div>
+      <div class="flex-between text-sm"><span class="text-muted">Reason</span><span class="text-xs">${a.reason||''}</span></div>
+    </div>`;
+}
+
+async function triggerFederatedAggregate() {
+  showToast('⏳ Aggregating federated weights…', 'info');
+  try {
+    const res = await API.post('/proctor/federated/aggregate', {});
+    if (res.success) {
+      const m = res.global_model;
+      showToast(`✅ Global model updated — Round ${m.rounds}, Accuracy: ${(m.accuracy*100).toFixed(2)}%`, 'success');
+      loadFederated();
+    } else {
+      showToast(res.message || 'Aggregation failed', 'error');
+    }
+  } catch(e) { showToast('Server error', 'error'); }
+}
+
+/* ── Stored Answers ──────────────────────────────────────────── */
+async function loadStoredAnswers() {
+  const d = await API.getStoredAnswers();
+  _allAnswers = d.answers || [];
+  renderStoredAnswers(_allAnswers);
+}
+
+function filterStoredAnswers() {
+  const q = (document.getElementById('saSearch')?.value || '').toLowerCase();
+  const t = document.getElementById('saFilterType')?.value || '';
+  let list = _allAnswers;
+  if (q) list = list.filter(a => (a.student_name||'').toLowerCase().includes(q) || (a.exam_title||'').toLowerCase().includes(q) || (a.student_sid||'').toLowerCase().includes(q));
+  if (t) list = list.filter(a => a.question_type === t);
+  renderStoredAnswers(list);
+}
+
+function renderStoredAnswers(list) {
+  const el = document.getElementById('saContainer');
+  if (!list.length) { el.innerHTML = '<p class="text-muted">No answers found.</p>'; return; }
+
+  // Group by session
+  const sessions = {};
+  list.forEach(a => {
+    const key = a.session_id;
+    if (!sessions[key]) sessions[key] = { session_id: a.session_id, student_name: a.student_name, student_sid: a.student_sid, exam_title: a.exam_title, answers: [] };
+    sessions[key].answers.push(a);
+  });
+
+  el.innerHTML = Object.values(sessions).map(s => `
+    <div class="card mb-3">
+      <div class="card-header" style="flex-wrap:wrap;gap:0.5rem">
+        <span class="card-title">👤 ${s.student_name} <span class="text-xs text-muted">(${s.student_sid})</span></span>
+        <span class="badge badge-info">${s.exam_title}</span>
+        <span class="text-xs text-muted">Session #${s.session_id}</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>#</th><th>Question</th><th>Type</th><th>Student Answer</th><th>Correct</th><th>Marks</th></tr></thead>
+          <tbody>
+            ${s.answers.map((a, i) => {
+              let answerDisplay = '';
+              if (a.question_type === 'MCQ') {
+                const optMap = {A: a.option_a, B: a.option_b, C: a.option_c, D: a.option_d};
+                const selOpt = (a.student_answer||'').toUpperCase();
+                answerDisplay = selOpt
+                  ? `<span class="badge ${a.is_correct ? 'badge-success' : 'badge-danger'}">${selOpt}</span> <span class="text-sm">${optMap[selOpt]||''}</span>`
+                  : '<span class="text-muted text-xs">Not answered</span>';
+              } else {
+                const code = a.student_answer || '';
+                answerDisplay = code
+                  ? `<details><summary class="text-xs" style="cursor:pointer;color:var(--accent)">View Code (${code.split('\n').length} lines)</summary><pre style="background:#0d1117;border-radius:8px;padding:0.75rem;font-size:0.78rem;margin-top:0.5rem;max-height:200px;overflow:auto;color:#4ade80;white-space:pre-wrap">${code.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre></details>`
+                  : '<span class="text-muted text-xs">No code submitted</span>';
+              }
+             // Replace the problematic return block with this:
+return `<tr>
+    <td class="text-xs">${i + 1}</td>
+    <td style="max-width:220px; font-size:0.85rem">${a.question_text || ''}</td>
+    <td>
+        <span class="badge ${a.question_type === 'MCQ' ? 'badge-info' : 'badge-warning'}">
+            ${a.question_type}
+        </span>
+    </td>
+    <td>${answerDisplay}</td>
+    <td>
+        ${a.question_type === 'MCQ' 
+            ? `<span class="text-xs">${(a.correct_answer || '').toUpperCase()}</span>` 
+            : `<span class="text-xs text-muted">-</span>`
+        }
+    </td>
+    <td>
+        ${a.is_correct 
+            ? `<span class="badge badge-success"> ✅ ${a.marks_obtained}</span>` 
+            : `<span class="badge badge-danger"> ❌ 0</span>`
+        }
+    </td>
+</tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`).join('');
+}
+
+</script>
+</body>
+</html>
