@@ -279,6 +279,4 @@ Security:  bcrypt, CORS, JWT tokens
 
 This project is built for **educational/academic purposes** as a Final Year Project.
 
----
 
-*© 2025 AIOEPS — AI Based Online Examination Proctoring System*
